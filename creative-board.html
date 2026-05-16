@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Creative Board</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #F7F5F2; font-family: 'Hiragino Sans', 'Noto Sans JP', sans-serif; }
+  input[type="datetime-local"] { -webkit-appearance: none; }
+  textarea { -webkit-appearance: none; }
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #ddd; border-radius: 2px; }
+  @keyframes slideDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+  @keyframes bounceFast { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
+  @keyframes wiggle { 0%,100%{transform:rotate(-8deg)} 50%{transform:rotate(8deg)} }
+  @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+  @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
+  @keyframes zzz { 0%,100%{opacity:1;transform:translateY(0) scale(1)} 50%{opacity:0.4;transform:translateY(-4px) scale(0.9)} }
+  @keyframes celebrate { 0%{transform:translateY(0) rotate(0)} 25%{transform:translateY(-14px) rotate(-10deg)} 50%{transform:translateY(0) rotate(0)} 75%{transform:translateY(-10px) rotate(10deg)} 100%{transform:translateY(0) rotate(0)} }
+  @keyframes starPop { 0%{opacity:0;transform:scale(0)} 60%{opacity:1;transform:scale(1.2)} 100%{opacity:1;transform:scale(1)} }
+  @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+const NUDGES = [
+  { icon: "✏️", text: "今日、5分だけスケッチしてみよう" },
+  { icon: "👀", text: "好きなイラストレーターの最新作、チェックしてみた？" },
+  { icon: "🚶", text: "外に出て人間観察の時間、取れそう？" },
+  { icon: "💬", text: "クリエイター仲間と最近交流した？" },
+  { icon: "🎨", text: "気になってたギャラリーやオンライン展示、見てみよう" },
+  { icon: "📱", text: "参考になりそうなアカウント、新しくフォローしてみよう" },
+  { icon: "🎬", text: "インスピレーションになりそうな映画や動画、見た？" },
+  { icon: "📖", text: "積読になってる本、少しだけ読んでみよう" },
+];
+
+const mkTask = (id, label, done = false) => ({
+  id, label, done,
+  reminders: { start: "", end: "" },
+  firedStart: false, firedEnd: false,
+});
+
+const PROJECT_EMOJIS = [
+  "🎨","✏️","🖌️","📐","🎭","🎬","🎵","🎤","📸","🖥️",
+  "🌸","🌿","🍄","⭐","🔥","💫","🌙","🌈","🦋","🐾",
+  "💎","🏆","📦","📋","🗂️","💡","🔮","🎯","🚀","⚡",
+];
+
+const INITIAL_PROJECTS = [
+  {
+    id: 1, title: "VTuberキャラデザ", emoji: "🎨", client: "クライアントA",
+    deadline: new Date(Date.now() + 3 * 86400000), color: "#FF6B6B",
+    tasks: [mkTask(1,"ラフ提案",true), mkTask(2,"修正対応",true), mkTask(3,"清書"), mkTask(4,"納品データ整理")],
+    memos: [{ id: 1, text: "ラフ2案出し済み、Bパターンで進行", date: "2026/05/10" }],
+    
+  },
+  {
+    id: 2, title: "Live2Dモデリング", emoji: "🖥️", client: "クライアントB",
+    deadline: new Date(Date.now() + 10 * 86400000), color: "#4ECDC4",
+    tasks: [mkTask(1,"パーツ分け",true), mkTask(2,"メッシュ設定"), mkTask(3,"パラメータ設定"), mkTask(4,"物理演算"), mkTask(5,"書き出し・確認")],
+    memos: [],
+    
+  },
+  {
+    id: 3, title: "カットイラスト制作", emoji: "✏️", client: "クライアントC",
+    deadline: new Date(Date.now() + 21 * 86400000), color: "#A29BFE",
+    tasks: [mkTask(1,"ラフ"), mkTask(2,"線画"), mkTask(3,"彩色")],
+    memos: [],
+    
+  },
+];
+
+const INITIAL_PROMOTION = [
+  { id: 1, label: "Xに制作過程を投稿", done: false, due: "今日" },
+  { id: 2, label: "Instagramに完成作品を投稿", done: false, due: "今日" },
+  { id: 3, label: "Coconalaブログ更新", done: false, due: "今週" },
+  { id: 4, label: "実績紹介記事の執筆", done: false, due: "今週" },
+];
+
+const INITIAL_LINKS = [
+  { id: 1, label: "X (Twitter)", url: "https://x.com/naryu776", color: "#1A1A1A", icon: "𝕏" },
+  { id: 2, label: "Instagram", url: "https://www.instagram.com/naryuillustrator/", color: "#E1306C", icon: "📷" },
+  { id: 3, label: "Coconala", url: "https://coconala.com/services/2687855", color: "#FF7B39", icon: "🥥" },
+  { id: 4, label: "ポートフォリオ", url: "https://www.naccarni.com/", color: "#4A90D9", icon: "🎨" },
+];
+
+const getDaysLeft = (d) => Math.ceil((new Date(d) - new Date()) / 86400000);
+const getUrgency = (days) => {
+  if (days <= 3) return { bg: "#FFF0F0", accent: "#FF4444", label: "緊急" };
+  if (days <= 7) return { bg: "#FFFBF0", accent: "#FF9500", label: "注意" };
+  return { bg: "#F0FFF8", accent: "#00C96B", label: "余裕" };
+};
+const getProgress = (tasks) => Math.round((tasks.filter(t => t.done).length / tasks.length) * 100);
+const fmtDue = (due) => {
+  if (!due) return "";
+  // ISO日付なら MM/DD 形式で表示
+  if (due.match(/^\d{4}-\d{2}-\d{2}/)) {
+    const d = new Date(due);
+    return `${d.getMonth()+1}/${d.getDate()}`;
+  }
+  return due;
+};
+
+const fmtDt = (iso) => {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const m = String(d.getMonth()+1).padStart(2,"0");
+  const dd = String(d.getDate()).padStart(2,"0");
+  const hh = String(d.getHours()).padStart(2,"0");
+  const mm = String(d.getMinutes()).padStart(2,"0");
+  return `${m}/${dd} ${hh}:${mm}`;
+};
+
+const Bell = ({ active, color }) => (
+  <svg width="15" height="15" viewBox="0 0 24 24"
+    fill={active ? color : "none"} stroke={active ? color : "#ccc"}
+    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+    <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+  </svg>
+);
+
+
+// -------------------------------------------------------
+// PixelMascot: 2コマアニメ対応、画像差し替え可能なキャラコンポーネント
+//
+// 実画像に差し替える場合：
+//   <EmojiChar pct={progress} emoji={project.emoji||'🎨'} />
+//   project.charImages = { f1: "char1_f1.png", f2: "char1_f2.png" }
+//   でプロジェクトごとに別キャラを設定できます。
+// -------------------------------------------------------
+
+const EmojiChar = ({pct, emoji}) => {
+  const state = pct===0?"sleep":pct<=25?"idle":pct<=60?"work":pct<=89?"hype":pct<100?"almost":"done";
+  const [frame, setFrame] = React.useState(0);
+  React.useEffect(()=>{
+    const speed = {sleep:2000,idle:800,work:500,hype:250,almost:150,done:200}[state];
+    const id = setInterval(()=>setFrame(f=>f===0?1:0), speed);
+    return ()=>clearInterval(id);
+  },[state]);
+
+  const transforms = {
+    sleep:  ["translateY(0px)","translateY(-2px)"],
+    idle:   ["translateY(0px)","translateY(-5px)"],
+    work:   ["translateY(0px)","translateY(-7px)"],
+    hype:   ["translateY(0px) rotate(-8deg)","translateY(-10px) rotate(8deg)"],
+    almost: ["translateY(0px) rotate(-12deg)","translateY(-12px) rotate(12deg)"],
+    done:   ["translateY(0px) scale(1)","translateY(-8px) scale(1.15)"],
+  }[state];
+
+  const msg = {
+    sleep:"まだ始まってないよ〜",
+    idle:"ゆっくり始めよう",
+    work:"いい感じ！",
+    hype:"どんどん来てる！",
+    almost:"あと少し！",
+    done:"完了！🎉",
+  }[state];
+
+  const bgColor = {
+    sleep:"#F0F0F0", idle:"#E8F5E9", work:"#E3F2FD",
+    hype:"#FFF3E0", almost:"#FBE9E7", done:"#F3E5F5",
+  }[state];
+
+  const overlays = {
+    sleep: null,
+    almost: <span style={{position:"absolute",top:-6,right:-6,fontSize:12}}>💦</span>,
+    done: <span style={{position:"absolute",top:-10,left:"50%",transform:"translateX(-50%)",fontSize:10,whiteSpace:"nowrap"}}>✨✨</span>,
+  };
+
+  return (
+    <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,minWidth:56}}>
+      <div style={{position:"relative"}}>
+        {overlays[state]}
+        <div style={{
+          width:48, height:48, borderRadius:14,
+          background:bgColor,
+          display:"flex", alignItems:"center", justifyContent:"center",
+          fontSize:26,
+          transform: transforms[frame],
+          transition:"transform 0.15s ease",
+        }}>
+          {emoji}
+        </div>
+      </div>
+      <div style={{fontSize:8,color:"#aaa",textAlign:"center",lineHeight:1.3,maxWidth:56}}>{msg}</div>
+    </div>
+  );
+};
+
+function App() {
+  const loadState = (key, fallback) => {
+    try {
+      const saved = localStorage.getItem(key);
+      if (!saved) return fallback;
+      const parsed = JSON.parse(saved);
+      // deadlineはDate型に復元
+      if (key === "cb_projects") return parsed.map(p => ({
+        ...p,
+        deadline: new Date(p.deadline),
+        startDate: p.startDate ? new Date(p.startDate) : null,
+      }));
+      return parsed;
+    } catch { return fallback; }
+  };
+
+  const [projects, setProjects] = useState(() => loadState("cb_projects", INITIAL_PROJECTS));
+  const [promotion, setPromotion] = useState(() => loadState("cb_promotion", INITIAL_PROMOTION));
+  const [myLinks, setMyLinks] = useState(() => loadState("cb_links", INITIAL_LINKS));
+  const [showAddLink, setShowAddLink] = useState(false);
+  const [newLink, setNewLink] = useState({ label: "", url: "", icon: "🔗", color: "#888" });
+  const [editLinkId, setEditLinkId] = useState(null);
+  const [expandedId, setExpandedId] = useState(null);
+  const [nudge, setNudge] = useState(NUDGES[0]);
+  const [nudgeVisible, setNudgeVisible] = useState(true);
+  const [activeTab, setActiveTab] = useState("dashboard");
+  const [headerColor, setHeaderColor] = useState(() => localStorage.getItem("cb_headerColor") || "#1A1A2E");
+  const [showColorPicker, setShowColorPicker] = useState(false);
+  const headerTextColor = (() => {
+    try {
+      const hex = headerColor.replace("#","");
+      const r=parseInt(hex.slice(0,2),16), g=parseInt(hex.slice(2,4),16), b=parseInt(hex.slice(4,6),16);
+      const luminance = (0.299*r + 0.587*g + 0.114*b) / 255;
+      return luminance > 0.5 ? "#1A1A2E" : "#ffffff";
+    } catch { return "#ffffff"; }
+  })();
+  const headerSubColor = (() => {
+    try {
+      const hex = headerColor.replace("#","");
+      const r=parseInt(hex.slice(0,2),16), g=parseInt(hex.slice(2,4),16), b=parseInt(hex.slice(4,6),16);
+      const luminance = (0.299*r + 0.587*g + 0.114*b) / 255;
+      return luminance > 0.5 ? "rgba(0,0,0,0.4)" : "rgba(255,255,255,0.5)";
+    } catch { return "rgba(255,255,255,0.5)"; }
+  })();
+  const [showAdd, setShowAdd] = useState(false);
+  const [newP, setNewP] = useState({ title: "", client: "", startDate: "", endDate: "", emoji: "🎨" });
+  const [memoInputs, setMemoInputs] = useState({});
+  const [openReminder, setOpenReminder] = useState(null);
+  const [taskInputs, setTaskInputs] = useState({});
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [newPromotion, setNewPromotion] = useState({ label: "", due: "今日" });
+  const [showAddPromotion, setShowAddPromotion] = useState(false);
+  const [editPromotion, setEditPromotion] = useState(null); // {id, label, due}
+  const [notifPerm, setNotifPerm] = useState("default");
+  const [toasts, setToasts] = useState([]);
+
+  useEffect(() => {
+    setNudge(NUDGES[Math.floor(Math.random() * NUDGES.length)]);
+    if ("Notification" in window) setNotifPerm(Notification.permission);
+  }, []);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      const now = new Date();
+      setProjects(prev => prev.map(p => ({
+        ...p,
+        tasks: p.tasks.map(t => {
+          let u = {...t};
+          if (t.reminders.start && !t.firedStart && now >= new Date(t.reminders.start)) {
+            fire(`「${t.label}」取り掛かり時刻です`, p.title);
+            toast(`🔔 「${t.label}」取り掛かり時刻！`);
+            u.firedStart = true;
+          }
+          if (t.reminders.end && !t.firedEnd && now >= new Date(t.reminders.end)) {
+            fire(`「${t.label}」終了予定時刻です`, p.title);
+            toast(`⏰ 「${t.label}」終了予定時刻！`);
+            u.firedEnd = true;
+          }
+          return u;
+        })
+      })));
+    }, 30000);
+    return () => clearInterval(id);
+  }, []);
+
+
+  // --- localStorage 保存 ---
+  useEffect(() => {
+    try { localStorage.setItem("cb_projects", JSON.stringify(projects)); } catch {}
+  }, [projects]);
+
+  useEffect(() => {
+    try { localStorage.setItem("cb_promotion", JSON.stringify(promotion)); } catch {}
+  }, [promotion]);
+
+  useEffect(() => {
+    try { localStorage.setItem("cb_links", JSON.stringify(myLinks)); } catch {}
+  }, [myLinks]);
+
+  useEffect(() => {
+    try { localStorage.setItem("cb_headerColor", headerColor); } catch {}
+  }, [headerColor]);
+
+  const fire = (body, title) => {
+    if ("Notification" in window && Notification.permission === "granted")
+      new Notification("Creative Board", { body: `${title}：${body}` });
+  };
+  const toast = (msg) => {
+    const id = Date.now();
+    setToasts(p => [...p, {id, msg}]);
+    setTimeout(() => setToasts(p => p.filter(t => t.id !== id)), 4000);
+  };
+  const requestNotif = async () => {
+    if (!("Notification" in window)) return;
+    const r = await Notification.requestPermission();
+    setNotifPerm(r);
+    if (r === "granted") toast("✅ 通知が許可されました");
+  };
+
+  const updateReminder = (pid, tid, key, val) =>
+    setProjects(prev => prev.map(p => p.id !== pid ? p : {
+      ...p, tasks: p.tasks.map(t => t.id !== tid ? t : {
+        ...t,
+        reminders: {...t.reminders, [key]: val},
+        firedStart: key === "start" ? false : t.firedStart,
+        firedEnd: key === "end" ? false : t.firedEnd,
+      })
+    }));
+
+  const clearReminders = (pid, tid) =>
+    setProjects(prev => prev.map(p => p.id !== pid ? p : {
+      ...p, tasks: p.tasks.map(t => t.id !== tid ? t : {
+        ...t, reminders: {start:"",end:""}, firedStart:false, firedEnd:false
+      })
+    }));
+
+  const toggleTask = (pid, tid) =>
+    setProjects(prev => prev.map(p => p.id !== pid ? p : {
+      ...p, tasks: p.tasks.map(t => t.id !== tid ? t : {...t, done: !t.done})
+    }));
+
+  // タスク追加
+  const addTask = (pid, label) => {
+    if (!label.trim()) return;
+    setProjects(prev => prev.map(p => p.id !== pid ? p : {
+      ...p,
+      tasks: [...p.tasks, mkTask(Date.now(), label.trim())]
+    }));
+  };
+
+  // タスク削除
+  const deleteTask = (pid, tid) => {
+    setProjects(prev => prev.map(p => p.id !== pid ? p : {
+      ...p,
+      tasks: p.tasks.filter(t => t.id !== tid)
+    }));
+  };
+
+  // 案件削除
+  const deleteProject = (pid) => {
+    setProjects(prev => prev.filter(p => p.id !== pid));
+    if (expandedId === pid) setExpandedId(null);
+    toast("🗑 案件を削除しました");
+  };
+
+  // 発信タスク追加
+  const addPromotionTask = (label, due) => {
+    if (!label.trim()) return;
+    setPromotion(prev => [...prev, { id: Date.now(), label: label.trim(), done: false, due: due || "今週" }]);
+  };
+
+  // 発信タスク更新
+  const updatePromotionTask = (id, label, due) => {
+    setPromotion(prev => prev.map(t => t.id !== id ? t : {...t, label, due}));
+    setEditPromotion(null);
+  };
+
+  // 発信タスク削除
+  const deletePromotionTask = (id) => {
+    setPromotion(prev => prev.filter(t => t.id !== id));
+  };
+
+  const addMemo = (pid) => {
+    const text = (memoInputs[pid] || "").trim();
+    if (!text) return;
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,"0")}/${String(now.getDate()).padStart(2,"0")}`;
+    setProjects(prev => prev.map(p => p.id !== pid ? p : {
+      ...p, memos: [{id: Date.now(), text, date: dateStr}, ...p.memos]
+    }));
+    setMemoInputs(prev => ({...prev, [pid]: ""}));
+  };
+
+  const deleteMemo = (pid, mid) =>
+    setProjects(prev => prev.map(p => p.id !== pid ? p : {
+      ...p, memos: p.memos.filter(m => m.id !== mid)
+    }));
+
+  const addProject = () => {
+    if (!newP.title || !newP.endDate) return;
+    setProjects(prev => [...prev, {
+      id: Date.now(), title: newP.title, client: newP.client || "未設定",
+      deadline: new Date(newP.endDate),
+      startDate: newP.startDate ? new Date(newP.startDate) : null,
+      color: ["#FF6B6B","#4ECDC4","#A29BFE","#FFD93D","#F8A5C2"][Math.floor(Math.random()*5)],
+      tasks: [mkTask(1,"ラフ")], memos: [], charImages: null, emoji: newP.emoji || "🎨",
+    }]);
+    setNewP({title:"",client:"",startDate:"",endDate:"",emoji:"🎨"});
+    setShowAdd(false);
+  };
+
+  const today = new Date().toLocaleDateString("ja-JP", {year:"numeric",month:"long",day:"numeric",weekday:"short"});
+  const urgentCount = projects.filter(p => getDaysLeft(p.deadline) <= 3).length;
+
+  const S = {
+    wrap: { minHeight:"100vh", background:"#F7F5F2", maxWidth:430, margin:"0 auto", position:"relative" },
+    toastWrap: { position:"fixed", top:16, left:"50%", transform:"translateX(-50%)", zIndex:999, width:"90%", maxWidth:380 },
+    toast: { background:"#1A1A2E", color:"#fff", borderRadius:12, padding:"12px 16px", marginBottom:8, fontSize:13, fontWeight:600, boxShadow:"0 4px 20px rgba(0,0,0,0.25)", animation:"slideDown 0.3s ease" },
+    header: { background:headerColor, padding:"20px 20px 16px", position:"sticky", top:0, zIndex:100 },
+    tab: (active) => ({ flex:1, padding:"7px 0", borderRadius:8, border:"none", cursor:"pointer", fontSize:12, fontWeight:600, fontFamily:"inherit", transition:"all 0.2s", background: active ? "#fff" : "transparent", color: active ? "#1A1A2E" : "rgba(255,255,255,0.5)" }),
+    card: (urgent) => ({ background:"#fff", borderRadius:16, marginBottom:12, overflow:"hidden", boxShadow:"0 2px 12px rgba(0,0,0,0.06)", border: urgent ? "1.5px solid #FF4444" : "1.5px solid transparent" }),
+    notifBanner: { background:"#FFF8E7", border:"1.5px solid #FFD93D", borderRadius:12, padding:"10px 14px", marginBottom:12, display:"flex", alignItems:"center", justifyContent:"space-between" },
+    reminderPanel: (color) => ({ background:"#fff", borderRadius:12, margin:"6px 0 8px", padding:14, border:`1.5px solid ${color}33`, boxShadow:"0 2px 10px rgba(0,0,0,0.07)" }),
+    input: { width:"100%", padding:"9px 10px", borderRadius:8, border:"1.5px solid #E0E0E0", fontSize:12, fontFamily:"inherit", outline:"none", boxSizing:"border-box" },
+    footer: { position:"fixed", bottom:0, left:"50%", transform:"translateX(-50%)", width:"100%", maxWidth:430, background:"rgba(247,245,242,0.95)", backdropFilter:"blur(10px)", borderTop:"1px solid #EEE", padding:"10px 16px 20px", textAlign:"center", fontSize:10, color:"#CCC" },
+  };
+
+  return (
+    <div style={S.wrap}>
+      <div style={S.toastWrap}>
+        {toasts.map(t => <div key={t.id} style={S.toast}>{t.msg}</div>)}
+      </div>
+
+      {/* Header */}
+      <div style={S.header}>
+        <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start"}}>
+          <div>
+            <div style={{color:headerSubColor, fontSize:11, letterSpacing:1, marginBottom:2}}>{today}</div>
+            <div style={{display:"flex", alignItems:"center", gap:8}}>
+              <div style={{color:headerTextColor, fontSize:20, fontWeight:700, letterSpacing:-0.5}}>Creative Board</div>
+              <button onClick={() => setShowColorPicker(p=>!p)} style={{background: headerTextColor==="#1A1A2E" ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.12)", border:"none", borderRadius:8, padding:"4px 8px", cursor:"pointer", fontSize:12, color:headerTextColor, fontFamily:"inherit"}}>🎨</button>
+            </div>
+            {showColorPicker && (
+              <div style={{marginTop:10, background: headerTextColor==="#1A1A2E" ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.08)", borderRadius:12, padding:"10px 12px"}}>
+                <div style={{fontSize:10, color:headerSubColor, marginBottom:8, letterSpacing:0.5}}>ヘッダーカラー</div>
+                <div style={{display:"flex", gap:8, flexWrap:"wrap", marginBottom:8}}>
+                  {["#1A1A2E","#2D2D2D","#1B4332","#1E3A5F","#4A1942","#7B2D00","#1A3A4A","#2C1654"].map(c=>(
+                    <div key={c} onClick={()=>{setHeaderColor(c);}} style={{width:28,height:28,borderRadius:"50%",background:c,cursor:"pointer",border:headerColor===c?"3px solid #fff":"3px solid transparent",transition:"border 0.15s"}}/>
+                  ))}
+                </div>
+                <div style={{display:"flex", alignItems:"center", gap:8}}>
+                  <div style={{fontSize:10, color:headerSubColor}}>カスタム</div>
+                  <input type="color" value={headerColor} onChange={e=>setHeaderColor(e.target.value)}
+                    style={{width:32, height:28, borderRadius:6, border:"none", cursor:"pointer", background:"transparent", padding:0}}
+                  />
+                  <div style={{fontSize:11, color:headerTextColor, fontFamily:"monospace"}}>{headerColor}</div>
+                  <button onClick={()=>setShowColorPicker(false)} style={{marginLeft:"auto", background: headerTextColor==="#1A1A2E" ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.15)", border:"none", borderRadius:6, padding:"4px 10px", color:headerTextColor, fontSize:11, cursor:"pointer", fontFamily:"inherit"}}>閉じる</button>
+                </div>
+              </div>
+            )}
+          </div>
+          <div style={{display:"flex", gap:8}}>
+            {urgentCount > 0 && <div style={{background:"#FF4444", color:"#fff", borderRadius:20, padding:"4px 10px", fontSize:11, fontWeight:700}}>⚠ {urgentCount}件緊急</div>}
+            <div style={{background: headerTextColor==="#1A1A2E" ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.1)", color:headerTextColor, borderRadius:20, padding:"4px 10px", fontSize:11}}>{projects.length}件稼働中</div>
+          </div>
+        </div>
+        <div style={{display:"flex", gap:4, marginTop:14}}>
+          {[{id:"dashboard",label:"案件"},{id:"promotion",label:"発信"},{id:"input",label:"インプット"}].map(tab =>
+            <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={S.tab(activeTab===tab.id)}>{tab.label}</button>
+          )}
+        </div>
+      </div>
+
+      <div style={{padding:"16px 16px 100px"}}>
+
+        {/* Notif banner */}
+        {notifPerm !== "granted" && activeTab === "dashboard" && (
+          <div style={S.notifBanner}>
+            <div style={{fontSize:12, color:"#886600"}}>🔔 通知を許可するとリマインドが届きます</div>
+            <button onClick={requestNotif} style={{background:"#FFD93D", border:"none", borderRadius:8, padding:"5px 10px", fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"inherit"}}>許可する</button>
+          </div>
+        )}
+
+        {/* Dashboard */}
+        {activeTab === "dashboard" && (
+          <div>
+            {[...projects].sort((a,b) => getDaysLeft(a.deadline)-getDaysLeft(b.deadline)).map(project => {
+              const days = getDaysLeft(project.deadline);
+              const urgency = getUrgency(days);
+              const progress = getProgress(project.tasks);
+              const isExpanded = expandedId === project.id;
+
+              return (
+                <div key={project.id} style={S.card(days<=3)}>
+                  <div onClick={() => setExpandedId(isExpanded ? null : project.id)} style={{padding:16, cursor:"pointer"}}>
+                    <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:8}}>
+                      <div style={{display:"flex", alignItems:"flex-start", gap:10, flex:1}}>
+                        <div style={{flexShrink:0}}>
+                          <EmojiChar pct={progress} emoji={project.emoji||'🎨'} />
+                        </div>
+                        <div style={{flex:1, paddingTop:4}}>
+                          <div style={{display:"flex", alignItems:"center", gap:6, marginBottom:3}}>
+                            <div style={{width:8, height:8, borderRadius:"50%", background:project.color, flexShrink:0}} />
+                            <div style={{fontSize:14, fontWeight:700, color:"#1A1A2E", lineHeight:1.3}}>{project.title}</div>
+                          </div>
+                          <div style={{fontSize:10, color:"#999", marginLeft:14}}>{project.client}</div>
+                        </div>
+                      </div>
+                      <div style={{textAlign:"right", flexShrink:0}}>
+                        <div style={{background:urgency.bg, color:urgency.accent, borderRadius:8, padding:"4px 10px", fontSize:12, fontWeight:700}}>
+                          {days <= 0 ? "期限超過!" : `残り${days}日`}
+                        </div>
+                        <div style={{fontSize:10, color:"#bbb", marginTop:3}}>{urgency.label}</div>
+                      </div>
+                    </div>
+                    <div style={{marginTop:12}}>
+                      <div style={{display:"flex", justifyContent:"space-between", marginBottom:4}}>
+                        <div style={{fontSize:10, color:"#bbb"}}>{project.tasks.filter(t=>t.done).length}/{project.tasks.length} タスク完了</div>
+                        <div style={{fontSize:10, fontWeight:700, color:project.color}}>{progress}%</div>
+                      </div>
+                      <div style={{height:6, background:"#F0F0F0", borderRadius:10, overflow:"hidden"}}>
+                        <div style={{height:"100%", width:`${progress}%`, background:project.color, borderRadius:10, transition:"width 0.4s ease"}} />
+                      </div>
+                    </div>
+                    <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginTop:8}}>
+                      {confirmDeleteId === project.id ? (
+                        <div onClick={e=>e.stopPropagation()} style={{display:"flex", alignItems:"center", gap:6}}>
+                          <span style={{fontSize:10, color:"#FF4444"}}>本当に削除？</span>
+                          <button onClick={e=>{e.stopPropagation(); deleteProject(project.id); setConfirmDeleteId(null);}} style={{background:"#FF4444", border:"none", borderRadius:6, padding:"3px 8px", color:"#fff", fontSize:10, cursor:"pointer", fontFamily:"inherit"}}>削除</button>
+                          <button onClick={e=>{e.stopPropagation(); setConfirmDeleteId(null);}} style={{background:"#EEE", border:"none", borderRadius:6, padding:"3px 8px", color:"#999", fontSize:10, cursor:"pointer", fontFamily:"inherit"}}>キャンセル</button>
+                        </div>
+                      ) : (
+                        <button onClick={e=>{e.stopPropagation(); setConfirmDeleteId(project.id);}} style={{background:"none", border:"none", color:"#ddd", fontSize:11, cursor:"pointer", fontFamily:"inherit", padding:0}}>🗑 削除</button>
+                      )}
+                      <div style={{fontSize:10, color:"#ccc"}}>{isExpanded ? "▲ 閉じる" : "▼ タスクを見る"}</div>
+                    </div>
+                  </div>
+
+                  {isExpanded && (
+                    <div style={{borderTop:"1px solid #F5F5F5", background:"#FAFAFA"}}>
+                      <div style={{padding:"12px 16px 8px"}}>
+                        <div style={{fontSize:10, color:"#bbb", marginBottom:6, letterSpacing:0.5}}>タスク</div>
+                        {project.tasks.map(task => {
+                          const rKey = `${project.id}-${task.id}`;
+                          const isROpen = openReminder === rKey;
+                          const hasR = task.reminders.start || task.reminders.end;
+                          return (
+                            <div key={task.id}>
+                              <div style={{display:"flex", alignItems:"center", gap:8, padding:"8px 0", borderBottom:"1px solid #F0F0F0"}}>
+                                <div onClick={() => toggleTask(project.id, task.id)} style={{width:20, height:20, borderRadius:6, flexShrink:0, cursor:"pointer", border: task.done ? "none" : `2px solid ${project.color}`, background: task.done ? project.color : "transparent", display:"flex", alignItems:"center", justifyContent:"center", transition:"all 0.2s"}}>
+                                  {task.done && <span style={{color:"#fff", fontSize:11}}>✓</span>}
+                                </div>
+                                <div style={{flex:1, cursor:"pointer"}} onClick={() => toggleTask(project.id, task.id)}>
+                                  <span style={{fontSize:13, color: task.done ? "#bbb" : "#333", textDecoration: task.done ? "line-through" : "none"}}>{task.label}</span>
+                                  {hasR && (
+                                    <div style={{display:"flex", gap:4, flexWrap:"wrap", marginTop:3}}>
+                                      {task.reminders.start && <span style={{fontSize:9, color:"#4ECDC4", background:"#F0FFFD", borderRadius:4, padding:"1px 5px"}}>▶ {fmtDt(task.reminders.start)}</span>}
+                                      {task.reminders.end && <span style={{fontSize:9, color:"#FF9500", background:"#FFFBF0", borderRadius:4, padding:"1px 5px"}}>■ {fmtDt(task.reminders.end)}</span>}
+                                    </div>
+                                  )}
+                                </div>
+                                <button onClick={() => setOpenReminder(isROpen ? null : rKey)} style={{background: isROpen ? "#F0F0F0" : "transparent", border:"none", borderRadius:8, padding:"5px 6px", cursor:"pointer", display:"flex", alignItems:"center"}}>
+                                  <Bell active={!!hasR} color={project.color} />
+                                </button>
+                                <button onClick={()=>deleteTask(project.id, task.id)} style={{background:"none", border:"none", color:"#ddd", fontSize:15, cursor:"pointer", padding:"0 2px", lineHeight:1}}>×</button>
+                              </div>
+
+                              {isROpen && (
+                                <div style={S.reminderPanel(project.color)}>
+                                  <div style={{fontSize:11, fontWeight:700, color:"#555", marginBottom:12}}>🔔 リマインド設定 — {task.label}</div>
+                                  {[{key:"start",label:"取り掛かり",color:"#4ECDC4"},{key:"end",label:"終了（締め切り）",color:"#FF9500"}].map(r => (
+                                    <div key={r.key} style={{marginBottom:12}}>
+                                      <div style={{display:"flex", alignItems:"center", gap:6, marginBottom:6}}>
+                                        <div style={{width:8, height:8, borderRadius:"50%", background:r.color}} />
+                                        <div style={{fontSize:11, color:"#555", fontWeight:600}}>{r.label}</div>
+                                      </div>
+                                      <input type="datetime-local" value={task.reminders[r.key]}
+                                        onChange={e => updateReminder(project.id, task.id, r.key, e.target.value)}
+                                        style={{...S.input, border:`1.5px solid ${task.reminders[r.key] ? r.color+"66" : "#E0E0E0"}`, background: task.reminders[r.key] ? r.color+"08" : "#fff"}}
+                                      />
+                                    </div>
+                                  ))}
+                                  <div style={{display:"flex", gap:6}}>
+                                    <button onClick={() => {clearReminders(project.id, task.id); setOpenReminder(null);}} style={{flex:1, padding:"8px", borderRadius:8, border:"1.5px solid #EEE", background:"#fff", color:"#bbb", fontSize:11, cursor:"pointer", fontFamily:"inherit"}}>クリア</button>
+                                    <button onClick={() => {setOpenReminder(null); toast("🔔 リマインドを設定しました");}} style={{flex:2, padding:"8px", borderRadius:8, border:"none", background:project.color, color:"#fff", fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"inherit"}}>保存して閉じる</button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+
+                        {/* タスク追加 */}
+                        <div style={{display:"flex", gap:6, marginTop:8}}>
+                          <input
+                            type="text"
+                            placeholder="タスクを追加…"
+                            value={taskInputs[project.id]||""}
+                            onChange={e => setTaskInputs(p=>({...p,[project.id]:e.target.value}))}
+                            onKeyDown={e=>{if(e.key==="Enter"){addTask(project.id, taskInputs[project.id]||""); setTaskInputs(p=>({...p,[project.id]:""}));}}}
+                            style={{flex:1, padding:"7px 10px", borderRadius:8, border:"1.5px solid #E8E8E8", fontSize:12, fontFamily:"inherit", outline:"none"}}
+                          />
+                          <button onClick={()=>{addTask(project.id, taskInputs[project.id]||""); setTaskInputs(p=>({...p,[project.id]:""}));}} style={{padding:"7px 12px", borderRadius:8, border:"none", background:project.color, color:"#fff", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit"}}>＋</button>
+                        </div>
+                      </div>
+
+                      {/* Memos */}
+                      <div style={{borderTop:"1px solid #ECECEC", padding:"12px 16px 16px"}}>
+                        <div style={{fontSize:10, color:"#bbb", marginBottom:8, letterSpacing:0.5}}>メモ</div>
+                        <div style={{display:"flex", gap:8, marginBottom:6}}>
+                          <textarea placeholder="メモを入力…" value={memoInputs[project.id]||""} rows={2}
+                            onChange={e => setMemoInputs(p => ({...p, [project.id]: e.target.value}))}
+                            onKeyDown={e => {if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();addMemo(project.id);}}}
+                            style={{flex:1, padding:"8px 10px", borderRadius:10, border:"1.5px solid #E8E8E8", fontSize:12, fontFamily:"inherit", outline:"none", resize:"none", lineHeight:1.5}}
+                          />
+                          <button onClick={() => addMemo(project.id)} style={{padding:"8px 12px", borderRadius:10, border:"none", background:project.color, color:"#fff", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit", alignSelf:"flex-end"}}>追加</button>
+                        </div>
+                        <div style={{fontSize:9, color:"#ccc", marginBottom:10}}>Enterで追加 / Shift+Enterで改行</div>
+                        {project.memos.length === 0
+                          ? <div style={{fontSize:12, color:"#ccc", textAlign:"center", padding:"8px 0"}}>まだメモがありません</div>
+                          : project.memos.map(memo => (
+                            <div key={memo.id} style={{background:"#fff", borderRadius:10, padding:"10px 12px", marginBottom:6, borderLeft:`3px solid ${project.color}`}}>
+                              <div style={{display:"flex", justifyContent:"space-between", gap:8}}>
+                                <div style={{fontSize:12, color:"#333", lineHeight:1.6, flex:1, whiteSpace:"pre-wrap"}}>{memo.text}</div>
+                                <button onClick={() => deleteMemo(project.id, memo.id)} style={{background:"none", border:"none", color:"#ddd", fontSize:14, cursor:"pointer"}}>×</button>
+                              </div>
+                              <div style={{fontSize:10, color:"#bbb", marginTop:4}}>{memo.date}</div>
+                            </div>
+                          ))
+                        }
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+
+            {!showAdd ? (
+              <button onClick={() => setShowAdd(true)} style={{width:"100%", padding:"14px", borderRadius:16, border:"2px dashed #DDD", background:"transparent", color:"#AAA", fontSize:13, cursor:"pointer", fontFamily:"inherit"}}>＋ 新しい案件を追加</button>
+            ) : (
+              <div style={{background:"#fff", borderRadius:16, padding:16, boxShadow:"0 2px 12px rgba(0,0,0,0.06)"}}>
+                <div style={{fontSize:13, fontWeight:700, marginBottom:12, color:"#1A1A2E"}}>新規案件</div>
+
+                {/* 絵文字選択 */}
+                <div style={{marginBottom:12}}>
+                  <div style={{fontSize:10, color:"#999", marginBottom:6}}>キャラクター絵文字</div>
+                  <div style={{display:"flex", flexWrap:"wrap", gap:6}}>
+                    {PROJECT_EMOJIS.map(e=>(
+                      <button key={e} onClick={()=>setNewP(p=>({...p,emoji:e}))}
+                        style={{width:36,height:36,borderRadius:10,border:"none",fontSize:20,cursor:"pointer",
+                          background: newP.emoji===e ? "#1A1A2E" : "#F5F5F5",
+                          transform: newP.emoji===e ? "scale(1.15)" : "scale(1)",
+                          transition:"all 0.15s",
+                        }}>{e}</button>
+                    ))}
+                  </div>
+                </div>
+
+                {[{key:"title",placeholder:"案件名（例：VTuberキャラデザ）",label:"案件名 *"},{key:"client",placeholder:"クライアント名",label:"クライアント"}].map(f => (
+                  <div key={f.key} style={{marginBottom:10}}>
+                    <div style={{fontSize:10, color:"#999", marginBottom:4}}>{f.label}</div>
+                    <input type="text" placeholder={f.placeholder} value={newP[f.key]} onChange={e => setNewP(p=>({...p,[f.key]:e.target.value}))} style={S.input} />
+                  </div>
+                ))}
+                <div style={{display:"flex", gap:8, marginBottom:10}}>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:10, color:"#999", marginBottom:4}}>開始日</div>
+                    <input type="date" value={newP.startDate} onChange={e => setNewP(p=>({...p,startDate:e.target.value}))} style={{...S.input, color: newP.startDate ? "#333" : "#aaa"}} />
+                  </div>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:10, color:"#999", marginBottom:4}}>締め切り日 *</div>
+                    <input type="date" value={newP.endDate} onChange={e => setNewP(p=>({...p,endDate:e.target.value}))} style={{...S.input, color: newP.endDate ? "#333" : "#aaa", borderColor: newP.endDate ? "#A29BFE66" : "#E0E0E0"}} />
+                  </div>
+                </div>
+                {newP.endDate && (
+                  <div style={{background:"#F5F3FF", borderRadius:8, padding:"8px 12px", marginBottom:10, fontSize:11, color:"#6C5CE7", display:"flex", alignItems:"center", gap:6}}>
+                    <span>📅</span>
+                    <span>
+                      {newP.startDate
+                        ? `期間：${Math.ceil((new Date(newP.endDate)-new Date(newP.startDate))/86400000)}日間 / 締め切りまで残り${Math.ceil((new Date(newP.endDate)-new Date())/86400000)}日`
+                        : `締め切りまで残り${Math.ceil((new Date(newP.endDate)-new Date())/86400000)}日`
+                      }
+                    </span>
+                  </div>
+                )}
+                <div style={{display:"flex", gap:8}}>
+                  <button onClick={() => setShowAdd(false)} style={{flex:1, padding:"10px", borderRadius:10, border:"1.5px solid #EEE", background:"#fff", color:"#999", fontSize:13, cursor:"pointer", fontFamily:"inherit"}}>キャンセル</button>
+                  <button onClick={addProject} style={{flex:2, padding:"10px", borderRadius:10, border:"none", background:"#1A1A2E", color:"#fff", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit"}}>追加する</button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Promotion */}
+        {activeTab === "promotion" && (
+          <div>
+            {/* My Links */}
+            <div style={{fontSize:11, color:"#999", marginBottom:10, letterSpacing:0.5}}>マイリンク</div>
+            <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:16}}>
+              {myLinks.map(link => (
+                <div key={link.id} style={{position:"relative"}}>
+                  <a href={link.url} target="_blank" rel="noopener noreferrer" style={{textDecoration:"none"}}>
+                    <div style={{background:"#fff", borderRadius:14, padding:"14px 12px", display:"flex", alignItems:"center", gap:10, boxShadow:"0 2px 8px rgba(0,0,0,0.06)", borderLeft:`4px solid ${link.color}`, cursor:"pointer", transition:"transform 0.15s", userSelect:"none"}}>
+                      <div style={{width:34, height:34, borderRadius:10, background:link.color+"15", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, flexShrink:0}}>
+                        {link.icon}
+                      </div>
+                      <div style={{overflow:"hidden"}}>
+                        <div style={{fontSize:12, fontWeight:700, color:"#1A1A2E", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis"}}>{link.label}</div>
+                        <div style={{fontSize:9, color:"#bbb", marginTop:1, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis"}}>{link.url.replace(/^https?:\/\//,"").split("/")[0]}</div>
+                      </div>
+                    </div>
+                  </a>
+                  <button
+                    onClick={() => setMyLinks(p => p.filter(l => l.id !== link.id))}
+                    style={{position:"absolute", top:6, right:6, background:"rgba(0,0,0,0.08)", border:"none", borderRadius:"50%", width:18, height:18, fontSize:10, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", color:"#999", lineHeight:1}}>×</button>
+                </div>
+              ))}
+              <button onClick={() => setShowAddLink(true)} style={{background:"transparent", border:"2px dashed #DDD", borderRadius:14, padding:"14px 12px", color:"#CCC", fontSize:12, cursor:"pointer", fontFamily:"inherit", display:"flex", alignItems:"center", justifyContent:"center", gap:6, minHeight:66}}>
+                <span style={{fontSize:18}}>＋</span> 追加
+              </button>
+            </div>
+
+            {/* Add Link Modal */}
+            {showAddLink && (
+              <div style={{background:"#fff", borderRadius:16, padding:16, marginBottom:16, boxShadow:"0 4px 20px rgba(0,0,0,0.1)", border:"1.5px solid #EEE"}}>
+                <div style={{fontSize:13, fontWeight:700, color:"#1A1A2E", marginBottom:12}}>リンクを追加</div>
+                {[
+                  {key:"label", placeholder:"サービス名（例：YouTube）", label:"名前 *"},
+                  {key:"url", placeholder:"https://...", label:"URL *"},
+                  {key:"icon", placeholder:"絵文字（例：🎥）", label:"アイコン（絵文字）"},
+                ].map(f => (
+                  <div key={f.key} style={{marginBottom:10}}>
+                    <div style={{fontSize:10, color:"#999", marginBottom:4}}>{f.label}</div>
+                    <input type="text" placeholder={f.placeholder} value={newLink[f.key]}
+                      onChange={e => setNewLink(p => ({...p, [f.key]: e.target.value}))}
+                      style={{width:"100%", padding:"9px 12px", borderRadius:10, border:"1.5px solid #EEE", fontSize:13, fontFamily:"inherit", outline:"none", boxSizing:"border-box"}}
+                    />
+                  </div>
+                ))}
+                <div style={{marginBottom:14}}>
+                  <div style={{fontSize:10, color:"#999", marginBottom:6}}>カラー</div>
+                  <div style={{display:"flex", gap:8, flexWrap:"wrap"}}>
+                    {["#1A1A1A","#E1306C","#FF7B39","#4A90D9","#00C96B","#A29BFE","#FF6B6B","#FFD93D"].map(c => (
+                      <div key={c} onClick={() => setNewLink(p => ({...p, color: c}))}
+                        style={{width:28, height:28, borderRadius:"50%", background:c, cursor:"pointer", border: newLink.color===c ? "3px solid #333" : "3px solid transparent", transition:"border 0.15s"}} />
+                    ))}
+                  </div>
+                </div>
+                <div style={{display:"flex", gap:8}}>
+                  <button onClick={() => {setShowAddLink(false); setNewLink({label:"",url:"",icon:"🔗",color:"#888"});}}
+                    style={{flex:1, padding:"10px", borderRadius:10, border:"1.5px solid #EEE", background:"#fff", color:"#999", fontSize:13, cursor:"pointer", fontFamily:"inherit"}}>キャンセル</button>
+                  <button onClick={() => {
+                    if (!newLink.label || !newLink.url) return;
+                    const url = newLink.url.startsWith("http") ? newLink.url : "https://"+newLink.url;
+                    setMyLinks(p => [...p, {id:Date.now(), label:newLink.label, url, icon:newLink.icon||"🔗", color:newLink.color}]);
+                    setShowAddLink(false);
+                    setNewLink({label:"",url:"",icon:"🔗",color:"#888"});
+                  }} style={{flex:2, padding:"10px", borderRadius:10, border:"none", background:"#1A1A2E", color:"#fff", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit"}}>追加する</button>
+                </div>
+              </div>
+            )}
+
+            {/* Tasks */}
+            <div style={{fontSize:11, color:"#999", marginBottom:10, letterSpacing:0.5}}>発信タスク</div>
+            {promotion.map(task => (
+              <div key={task.id} style={{background:"#fff", borderRadius:14, marginBottom:8, boxShadow:"0 2px 8px rgba(0,0,0,0.04)", overflow:"hidden"}}>
+                {editPromotion && editPromotion.id === task.id ? (
+                  /* 編集モード */
+                  <div style={{padding:"12px 14px"}}>
+                    <input type="text" value={editPromotion.label}
+                      onChange={e=>setEditPromotion(p=>({...p,label:e.target.value}))}
+                      style={{width:"100%", padding:"8px 10px", borderRadius:8, border:"1.5px solid #A29BFE", fontSize:13, fontFamily:"inherit", outline:"none", boxSizing:"border-box", marginBottom:8}}
+                    />
+                    <div style={{marginBottom:8}}>
+                      <div style={{fontSize:10, color:"#999", marginBottom:5}}>日付</div>
+                      <input type="date" value={editPromotion.due.match(/^\d{4}/) ? editPromotion.due : ""}
+                        onChange={e=>setEditPromotion(p=>({...p,due:e.target.value}))}
+                        style={{width:"100%", padding:"8px 10px", borderRadius:8, border:"1.5px solid #EEE", fontSize:12, fontFamily:"inherit", outline:"none", boxSizing:"border-box", marginBottom:6}}
+                      />
+                      <div style={{display:"flex", gap:5}}>
+                        {["今日","今週","来週"].map(d=>(
+                          <button key={d} onClick={()=>setEditPromotion(p=>({...p,due:d}))}
+                            style={{flex:1, padding:"5px", borderRadius:7, border:"none", fontSize:11, cursor:"pointer", fontFamily:"inherit",
+                              background: editPromotion.due===d?"#A29BFE":"#F0F0F0",
+                              color: editPromotion.due===d?"#fff":"#999", fontWeight: editPromotion.due===d?700:400}}>
+                            {d}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div style={{display:"flex", gap:6}}>
+                      <button onClick={()=>setEditPromotion(null)} style={{flex:1, padding:"8px", borderRadius:8, border:"1.5px solid #EEE", background:"#fff", color:"#999", fontSize:12, cursor:"pointer", fontFamily:"inherit"}}>キャンセル</button>
+                      <button onClick={()=>updatePromotionTask(task.id, editPromotion.label, editPromotion.due)}
+                        style={{flex:2, padding:"8px", borderRadius:8, border:"none", background:"#A29BFE", color:"#fff", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit"}}>保存</button>
+                    </div>
+                  </div>
+                ) : (
+                  /* 通常表示モード */
+                  <div style={{padding:"12px 16px", display:"flex", alignItems:"center", gap:12, opacity: task.done ? 0.5 : 1, transition:"opacity 0.2s"}}>
+                    <div onClick={() => setPromotion(p => p.map(t => t.id===task.id ? {...t,done:!t.done} : t))}
+                      style={{width:22, height:22, borderRadius:8, flexShrink:0, border: task.done?"none":"2px solid #A29BFE", background: task.done?"#A29BFE":"transparent", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer"}}>
+                      {task.done && <span style={{color:"#fff", fontSize:12}}>✓</span>}
+                    </div>
+                    <div onClick={() => setPromotion(p => p.map(t => t.id===task.id ? {...t,done:!t.done} : t))}
+                      style={{flex:1, fontSize:13, color:"#1A1A2E", textDecoration: task.done?"line-through":"none", cursor:"pointer"}}>{task.label}</div>
+                    <div style={{fontSize:10, color:"#FF6B6B", fontWeight:600}}>{fmtDue(task.due)}</div>
+                    <button onClick={()=>setEditPromotion({id:task.id, label:task.label, due:task.due})}
+                      style={{background:"none", border:"none", color:"#ccc", fontSize:13, cursor:"pointer", padding:"0 2px"}}>✏️</button>
+                    <button onClick={()=>deletePromotionTask(task.id)}
+                      style={{background:"none", border:"none", color:"#ddd", fontSize:15, cursor:"pointer", padding:0, lineHeight:1}}>×</button>
+                  </div>
+                )}
+              </div>
+            ))}
+            {!showAddPromotion ? (
+              <button onClick={()=>setShowAddPromotion(true)} style={{width:"100%", padding:"14px", borderRadius:14, border:"2px dashed #DDD", background:"transparent", color:"#AAA", fontSize:13, cursor:"pointer", fontFamily:"inherit"}}>＋ 発信タスクを追加</button>
+            ) : (
+              <div style={{background:"#fff", borderRadius:14, padding:14, boxShadow:"0 2px 8px rgba(0,0,0,0.06)"}}>
+                <input type="text" placeholder="タスク名を入力…" value={newPromotion.label}
+                  onChange={e=>setNewPromotion(p=>({...p,label:e.target.value}))}
+                  style={{width:"100%", padding:"9px 12px", borderRadius:10, border:"1.5px solid #EEE", fontSize:13, fontFamily:"inherit", outline:"none", boxSizing:"border-box", marginBottom:10}}
+                />
+                <div style={{marginBottom:10}}>
+                  <div style={{fontSize:10, color:"#999", marginBottom:5}}>日付</div>
+                  <input type="date" value={newPromotion.due.match(/^\d{4}/) ? newPromotion.due : ""}
+                    onChange={e=>setNewPromotion(p=>({...p,due:e.target.value}))}
+                    style={{width:"100%", padding:"8px 10px", borderRadius:8, border:"1.5px solid #EEE", fontSize:12, fontFamily:"inherit", outline:"none", boxSizing:"border-box", marginBottom:6}}
+                  />
+                  <div style={{display:"flex", gap:5}}>
+                    {["今日","今週","来週"].map(d=>(
+                      <button key={d} onClick={()=>setNewPromotion(p=>({...p,due:d}))}
+                        style={{flex:1, padding:"6px", borderRadius:7, border:"none", fontSize:11, cursor:"pointer", fontFamily:"inherit",
+                          background: newPromotion.due===d?"#A29BFE":"#F0F0F0",
+                          color: newPromotion.due===d?"#fff":"#999", fontWeight: newPromotion.due===d?700:400}}>
+                        {d}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div style={{display:"flex", gap:6}}>
+                  <button onClick={()=>{setShowAddPromotion(false);setNewPromotion({label:"",due:"今日"});}} style={{flex:1, padding:"9px", borderRadius:10, border:"1.5px solid #EEE", background:"#fff", color:"#999", fontSize:13, cursor:"pointer", fontFamily:"inherit"}}>キャンセル</button>
+                  <button onClick={()=>{addPromotionTask(newPromotion.label,newPromotion.due);setNewPromotion({label:"",due:"今日"});setShowAddPromotion(false);}} style={{flex:2, padding:"9px", borderRadius:10, border:"none", background:"#A29BFE", color:"#fff", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit"}}>追加する</button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Input */}
+        {activeTab === "input" && (
+          <div>
+            <div style={{fontSize:11, color:"#999", marginBottom:16}}>今日のクリエイティブ声掛け</div>
+            <div style={{background:"#1A1A2E", borderRadius:20, padding:"24px 20px", marginBottom:16, textAlign:"center", opacity: nudgeVisible ? 1 : 0, transition:"opacity 0.2s"}}>
+              <div style={{fontSize:40, marginBottom:12}}>{nudge.icon}</div>
+              <div style={{color:"#fff", fontSize:16, fontWeight:600, lineHeight:1.6, marginBottom:20}}>{nudge.text}</div>
+              <button onClick={() => { setNudgeVisible(false); setTimeout(() => { setNudge(NUDGES[Math.floor(Math.random()*NUDGES.length)]); setNudgeVisible(true); }, 200); }} style={{padding:"10px 24px", borderRadius:30, border:"1.5px solid rgba(255,255,255,0.2)", background:"transparent", color:"rgba(255,255,255,0.6)", fontSize:12, cursor:"pointer", fontFamily:"inherit"}}>別のを見る</button>
+            </div>
+            <div style={{fontSize:11, color:"#999", marginBottom:12}}>インプット活動リスト</div>
+            {NUDGES.map((n,i) => (
+              <div key={i} style={{background:"#fff", borderRadius:12, padding:"12px 16px", marginBottom:8, display:"flex", alignItems:"center", gap:12, boxShadow:"0 2px 8px rgba(0,0,0,0.04)"}}>
+                <span style={{fontSize:20}}>{n.icon}</span>
+                <span style={{fontSize:13, color:"#333", lineHeight:1.4}}>{n.text}</span>
+              </div>
+            ))}
+            <button style={{width:"100%", padding:"14px", borderRadius:14, border:"2px dashed #DDD", background:"transparent", color:"#AAA", fontSize:13, cursor:"pointer", fontFamily:"inherit", marginTop:4}}>＋ 声掛けをカスタム追加</button>
+          </div>
+        )}
+      </div>
+
+      <div style={S.footer}>
+        <span>Creative Board — prototype v0.24</span>
+        <button onClick={() => {
+          if (window.confirm("データをリセットしますか？")) {
+            localStorage.clear();
+            window.location.reload();
+          }
+        }} style={{marginLeft:12, background:"none", border:"none", color:"#CCC", fontSize:10, cursor:"pointer", fontFamily:"inherit", textDecoration:"underline"}}>リセット</button>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
