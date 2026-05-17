@@ -252,6 +252,7 @@ function App() {
   const [editPromotion, setEditPromotion] = useState(null); // {id, label, due}
   const [notifPerm, setNotifPerm] = useState("default");
   const [toasts, setToasts] = useState([]);
+  const [undoStack, setUndoStack] = useState([]); // {type, data, timer}
 
   useEffect(() => {
     setNudge(NUDGES[Math.floor(Math.random() * NUDGES.length)]);
@@ -338,6 +339,16 @@ function App() {
       ...p, tasks: p.tasks.map(t => t.id !== tid ? t : {...t, done: !t.done})
     }));
 
+  // Undo実行
+  const execUndo = (item) => {
+    if (item.type === "task") {
+      setProjects(prev => prev.map(p => p.id !== item.pid ? p : {
+        ...p, tasks: [...p.tasks.slice(0, item.index), item.task, ...p.tasks.slice(item.index)]
+      }));
+    }
+    setUndoStack(prev => prev.filter(u => u.id !== item.id));
+  };
+
   // タスク追加
   const addTask = (pid, label) => {
     if (!label.trim()) return;
@@ -347,11 +358,29 @@ function App() {
     }));
   };
 
-  // タスク削除
+  // タスク削除（ソフトデリート：その場でUndo）
   const deleteTask = (pid, tid) => {
+    // まずpendingDeleteフラグを立てる
     setProjects(prev => prev.map(p => p.id !== pid ? p : {
-      ...p,
-      tasks: p.tasks.filter(t => t.id !== tid)
+      ...p, tasks: p.tasks.map(t => t.id !== tid ? t : {...t, pendingDelete: true})
+    }));
+    // 5秒後に本当に削除
+    const timer = setTimeout(() => {
+      setProjects(prev => prev.map(p => p.id !== pid ? p : {
+        ...p, tasks: p.tasks.filter(t => t.id !== tid)
+      }));
+      setUndoStack(prev => prev.filter(u => !(u.pid===pid && u.tid===tid)));
+    }, 5000);
+    setUndoStack(prev => [...prev.filter(u=>!(u.pid===pid&&u.tid===tid)), {pid, tid, timer}]);
+  };
+
+  const undoDeleteTask = (pid, tid) => {
+    // timerをキャンセルしてpendingDeleteを解除
+    const item = undoStack.find(u => u.pid===pid && u.tid===tid);
+    if (item) clearTimeout(item.timer);
+    setUndoStack(prev => prev.filter(u => !(u.pid===pid && u.tid===tid)));
+    setProjects(prev => prev.map(p => p.id !== pid ? p : {
+      ...p, tasks: p.tasks.map(t => t.id !== tid ? t : {...t, pendingDelete: false})
     }));
   };
 
@@ -549,19 +578,38 @@ function App() {
                                 <div onClick={() => toggleTask(project.id, task.id)} style={{width:20, height:20, borderRadius:6, flexShrink:0, cursor:"pointer", border: task.done ? "none" : `2px solid ${project.color}`, background: task.done ? project.color : "transparent", display:"flex", alignItems:"center", justifyContent:"center", transition:"all 0.2s"}}>
                                   {task.done && <span style={{color:"#fff", fontSize:11}}>✓</span>}
                                 </div>
-                                <div style={{flex:1, cursor:"pointer"}} onClick={() => toggleTask(project.id, task.id)}>
-                                  <span style={{fontSize:13, color: task.done ? "#bbb" : "#333", textDecoration: task.done ? "line-through" : "none"}}>{task.label}</span>
-                                  {hasR && (
+                                <div style={{flex:1, cursor:"pointer"}} onClick={() => !task.pendingDelete && toggleTask(project.id, task.id)}>
+                                  <span style={{fontSize:13, color: task.pendingDelete ? "#ccc" : task.done ? "#bbb" : "#333", textDecoration: task.pendingDelete || task.done ? "line-through" : "none"}}>{task.label}</span>
+                                  {hasR && !task.pendingDelete && (
                                     <div style={{display:"flex", gap:4, flexWrap:"wrap", marginTop:3}}>
                                       {task.reminders.start && <span style={{fontSize:9, color:"#4ECDC4", background:"#F0FFFD", borderRadius:4, padding:"1px 5px"}}>▶ {fmtDt(task.reminders.start)}</span>}
                                       {task.reminders.end && <span style={{fontSize:9, color:"#FF9500", background:"#FFFBF0", borderRadius:4, padding:"1px 5px"}}>■ {fmtDt(task.reminders.end)}</span>}
                                     </div>
                                   )}
                                 </div>
-                                <button onClick={() => setOpenReminder(isROpen ? null : rKey)} style={{background: isROpen ? "#F0F0F0" : "transparent", border:"none", borderRadius:8, padding:"5px 6px", cursor:"pointer", display:"flex", alignItems:"center"}}>
-                                  <Bell active={!!hasR} color={project.color} />
-                                </button>
-                                <button onClick={()=>deleteTask(project.id, task.id)} style={{background:"none", border:"none", color:"#ddd", fontSize:15, cursor:"pointer", padding:"0 2px", lineHeight:1}}>×</button>
+                                {task.pendingDelete ? (
+                                  <div style={{display:"flex", gap:5}}>
+                                    <button onClick={()=>undoDeleteTask(project.id, task.id)}
+                                      style={{background:"#FF4444", border:"none", borderRadius:8, padding:"4px 10px", color:"#fff", fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"inherit", whiteSpace:"nowrap"}}>
+                                      キャンセル
+                                    </button>
+                                    <button onClick={()=>{
+                                      const item = undoStack.find(u=>u.pid===project.id&&u.tid===task.id);
+                                      if(item) clearTimeout(item.timer);
+                                      setUndoStack(prev=>prev.filter(u=>!(u.pid===project.id&&u.tid===task.id)));
+                                      setProjects(prev=>prev.map(p=>p.id!==project.id?p:{...p,tasks:p.tasks.filter(t=>t.id!==task.id)}));
+                                    }} style={{background:"#EEE", border:"none", borderRadius:8, padding:"4px 10px", color:"#999", fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"inherit", whiteSpace:"nowrap"}}>
+                                      削除
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <>
+                                    <button onClick={() => setOpenReminder(isROpen ? null : rKey)} style={{background: isROpen ? "#F0F0F0" : "transparent", border:"none", borderRadius:8, padding:"5px 6px", cursor:"pointer", display:"flex", alignItems:"center"}}>
+                                      <Bell active={!!hasR} color={project.color} />
+                                    </button>
+                                    <button onClick={()=>deleteTask(project.id, task.id)} style={{background:"none", border:"none", color:"#ddd", fontSize:15, cursor:"pointer", padding:"0 2px", lineHeight:1}}>×</button>
+                                  </>
+                                )}
                               </div>
 
                               {isROpen && (
@@ -868,7 +916,7 @@ function App() {
       </div>
 
       <div style={S.footer}>
-        <span>Creative Board — prototype v0.24</span>
+        <span>Creative Board — prototype v0.29</span>
         <button onClick={() => {
           if (window.confirm("データをリセットしますか？")) {
             localStorage.clear();
