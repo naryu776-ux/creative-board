@@ -80,17 +80,20 @@ const INITIAL_PROJECTS = [
 ];
 
 const INITIAL_PROMOTION = [
-  { id: 1, label: "Xに制作過程を投稿", done: false, due: "今日" },
-  { id: 2, label: "Instagramに完成作品を投稿", done: false, due: "今日" },
-  { id: 3, label: "Coconalaブログ更新", done: false, due: "今週" },
-  { id: 4, label: "実績紹介記事の執筆", done: false, due: "今週" },
+  { id: 1, label: "SNSに制作過程を投稿", done: false, due: "今日" },
+  { id: 2, label: "完成作品を投稿", done: false, due: "今週" },
+];
+
+const INITIAL_OPERATIONS = [
+  { id: 1, label: "ページ分析（アクセス・CVR確認）", done: false, repeat: "monthly", notify: "", lastDone: null },
+  { id: 2, label: "商品ページの改善・更新", done: false, repeat: "monthly", notify: "", lastDone: null },
+  { id: 3, label: "売上・収支確認", done: false, repeat: "monthly", notify: "", lastDone: null },
+  { id: 4, label: "SNSアカウント分析", done: false, repeat: "weekly", notify: "", lastDone: null },
 ];
 
 const INITIAL_LINKS = [
-  { id: 1, label: "X (Twitter)", url: "https://x.com/naryu776", color: "#1A1A1A", icon: "𝕏" },
-  { id: 2, label: "Instagram", url: "https://www.instagram.com/naryuillustrator/", color: "#E1306C", icon: "📷" },
-  { id: 3, label: "Coconala", url: "https://coconala.com/services/2687855", color: "#FF7B39", icon: "🥥" },
-  { id: 4, label: "ポートフォリオ", url: "https://www.naccarni.com/", color: "#4A90D9", icon: "🎨" },
+  { id: 1, label: "X (Twitter)", url: "https://x.com", color: "#1A1A1A", icon: "𝕏" },
+  { id: 2, label: "Instagram", url: "https://www.instagram.com", color: "#E1306C", icon: "📷" },
 ];
 
 const getDaysLeft = (d) => Math.ceil((new Date(d) - new Date()) / 86400000);
@@ -216,6 +219,10 @@ function App() {
   const [projects, setProjects] = useState(() => loadState("cb_projects", INITIAL_PROJECTS));
   const [promotion, setPromotion] = useState(() => loadState("cb_promotion", INITIAL_PROMOTION));
   const [myLinks, setMyLinks] = useState(() => loadState("cb_links", INITIAL_LINKS));
+  const [operations, setOperations] = useState(() => loadState("cb_operations", INITIAL_OPERATIONS));
+  const [showAddOp, setShowAddOp] = useState(false);
+  const [newOp, setNewOp] = useState({ label: "", repeat: "none", notify: "" });
+  const [editOpId, setEditOpId] = useState(null);
   const [showAddLink, setShowAddLink] = useState(false);
   const [newLink, setNewLink] = useState({ label: "", url: "", icon: "🔗", color: "#888" });
   const [editLinkId, setEditLinkId] = useState(null);
@@ -302,8 +309,46 @@ function App() {
   }, [myLinks]);
 
   useEffect(() => {
+    try { localStorage.setItem("cb_operations", JSON.stringify(operations)); } catch {}
+  }, [operations]);
+
+  useEffect(() => {
     try { localStorage.setItem("cb_headerColor", headerColor); } catch {}
   }, [headerColor]);
+
+  // 運営タスク完了トグル（繰り返しタスクはリセット）
+  const toggleOperation = (id) => {
+    setOperations(prev => prev.map(t => {
+      if (t.id !== id) return t;
+      const done = !t.done;
+      return {...t, done, lastDone: done ? new Date().toISOString() : t.lastDone};
+    }));
+  };
+
+  // 繰り返しタスクのリセットチェック
+  const checkRepeatReset = () => {
+    const now = new Date();
+    setOperations(prev => prev.map(t => {
+      if (!t.done || !t.lastDone || t.repeat === "none") return t;
+      const last = new Date(t.lastDone);
+      let shouldReset = false;
+      if (t.repeat === "daily") shouldReset = now.toDateString() !== last.toDateString();
+      if (t.repeat === "weekly") shouldReset = (now - last) >= 7 * 86400000;
+      if (t.repeat === "monthly") shouldReset = now.getMonth() !== last.getMonth() || now.getFullYear() !== last.getFullYear();
+      return shouldReset ? {...t, done: false} : t;
+    }));
+  };
+
+  const addOperation = () => {
+    if (!newOp.label.trim()) return;
+    setOperations(prev => [...prev, {id: Date.now(), label: newOp.label.trim(), done: false, repeat: newOp.repeat, notify: newOp.notify, lastDone: null}]);
+    setNewOp({label:"", repeat:"none", notify:""});
+    setShowAddOp(false);
+  };
+
+  const deleteOperation = (id) => {
+    setOperations(prev => prev.filter(t => t.id !== id));
+  };
 
   const fire = (body, title) => {
     if ("Notification" in window && Notification.permission === "granted")
@@ -515,7 +560,7 @@ function App() {
           </div>
         </div>
         <div style={{display:"flex", gap:4, marginTop:14}}>
-          {[{id:"dashboard",label:"案件"},{id:"promotion",label:"発信"},{id:"input",label:"インプット"}].map(tab =>
+          {[{id:"dashboard",label:"案件"},{id:"promotion",label:"発信"},{id:"operation",label:"運営"},{id:"input",label:"インプット"}].map(tab =>
             <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={S.tab(activeTab===tab.id)}>{tab.label}</button>
           )}
         </div>
@@ -961,6 +1006,107 @@ function App() {
         )}
 
         {/* Input */}
+        {activeTab === "operation" && (
+          <div>
+            <div style={{fontSize:11, color:"#999", marginBottom:12, letterSpacing:0.5}}>運営タスク</div>
+
+            {operations.map(task => {
+              const repeatLabel = {none:"繰り返しなし", daily:"毎日", weekly:"毎週", monthly:"毎月"}[task.repeat];
+              return (
+                <div key={task.id} style={{background:"#fff", borderRadius:14, marginBottom:8, boxShadow:"0 2px 8px rgba(0,0,0,0.04)", overflow:"hidden"}}>
+                  {editOpId === task.id ? (
+                    <div style={{padding:"12px 14px"}}>
+                      <input type="text" defaultValue={task.label} id={`op-edit-${task.id}`}
+                        style={{width:"100%", padding:"8px 10px", borderRadius:8, border:"1.5px solid #4ECDC4", fontSize:13, fontFamily:"inherit", outline:"none", boxSizing:"border-box", marginBottom:8}}
+                      />
+                      <div style={{marginBottom:8}}>
+                        <div style={{fontSize:10, color:"#999", marginBottom:5}}>繰り返し</div>
+                        <div style={{display:"flex", gap:5}}>
+                          {[{v:"none",l:"なし"},{v:"daily",l:"毎日"},{v:"weekly",l:"毎週"},{v:"monthly",l:"毎月"}].map(r=>(
+                            <button key={r.v} onClick={()=>setOperations(prev=>prev.map(t=>t.id!==task.id?t:{...t,repeat:r.v}))}
+                              style={{flex:1, padding:"5px", borderRadius:7, border:"none", fontSize:11, cursor:"pointer", fontFamily:"inherit",
+                                background: task.repeat===r.v?"#4ECDC4":"#F0F0F0",
+                                color: task.repeat===r.v?"#fff":"#999", fontWeight: task.repeat===r.v?700:400}}>
+                              {r.l}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div style={{marginBottom:10}}>
+                        <div style={{fontSize:10, color:"#999", marginBottom:5}}>通知日時</div>
+                        <input type="datetime-local" defaultValue={task.notify} id={`op-notify-${task.id}`}
+                          style={{width:"100%", padding:"8px 10px", borderRadius:8, border:"1.5px solid #EEE", fontSize:12, fontFamily:"inherit", outline:"none", boxSizing:"border-box"}}
+                        />
+                      </div>
+                      <div style={{display:"flex", gap:6}}>
+                        <button onClick={()=>setEditOpId(null)} style={{flex:1, padding:"8px", borderRadius:8, border:"1.5px solid #EEE", background:"#fff", color:"#999", fontSize:12, cursor:"pointer", fontFamily:"inherit"}}>キャンセル</button>
+                        <button onClick={()=>{
+                          const label = document.getElementById(`op-edit-${task.id}`).value;
+                          const notify = document.getElementById(`op-notify-${task.id}`).value;
+                          setOperations(prev=>prev.map(t=>t.id!==task.id?t:{...t,label,notify}));
+                          setEditOpId(null);
+                        }} style={{flex:2, padding:"8px", borderRadius:8, border:"none", background:"#4ECDC4", color:"#fff", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit"}}>保存</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{padding:"12px 16px", display:"flex", alignItems:"center", gap:12, opacity: task.done ? 0.5 : 1}}>
+                      <div onClick={()=>toggleOperation(task.id)} style={{width:22, height:22, borderRadius:8, flexShrink:0, cursor:"pointer",
+                        border: task.done?"none":"2px solid #4ECDC4", background: task.done?"#4ECDC4":"transparent",
+                        display:"flex", alignItems:"center", justifyContent:"center"}}>
+                        {task.done && <span style={{color:"#fff", fontSize:12}}>✓</span>}
+                      </div>
+                      <div style={{flex:1}} onClick={()=>toggleOperation(task.id)}>
+                        <div style={{fontSize:13, color:"#1A1A2E", textDecoration: task.done?"line-through":"none", cursor:"pointer"}}>{task.label}</div>
+                        <div style={{display:"flex", gap:6, marginTop:3, flexWrap:"wrap"}}>
+                          {task.repeat !== "none" && <span style={{fontSize:9, color:"#4ECDC4", background:"#F0FFFD", borderRadius:4, padding:"1px 6px", fontWeight:600}}>🔄 {repeatLabel}</span>}
+                          {task.notify && <span style={{fontSize:9, color:"#FF9500", background:"#FFFBF0", borderRadius:4, padding:"1px 6px"}}>🔔 {fmtDt(task.notify)}</span>}
+                        </div>
+                      </div>
+                      <button onClick={()=>setEditOpId(task.id)} style={{background:"none", border:"none", color:"#ccc", fontSize:13, cursor:"pointer", padding:"0 2px"}}>✏️</button>
+                      <button onClick={()=>deleteOperation(task.id)} style={{background:"none", border:"none", color:"#ddd", fontSize:15, cursor:"pointer", padding:0}}>×</button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+
+            {!showAddOp ? (
+              <button onClick={()=>setShowAddOp(true)} style={{width:"100%", padding:"14px", borderRadius:14, border:"2px dashed #DDD", background:"transparent", color:"#AAA", fontSize:13, cursor:"pointer", fontFamily:"inherit", marginTop:4}}>＋ 運営タスクを追加</button>
+            ) : (
+              <div style={{background:"#fff", borderRadius:14, padding:14, boxShadow:"0 2px 8px rgba(0,0,0,0.06)"}}>
+                <input type="text" placeholder="タスク名を入力…" value={newOp.label}
+                  onChange={e=>setNewOp(p=>({...p,label:e.target.value}))}
+                  style={{width:"100%", padding:"9px 12px", borderRadius:10, border:"1.5px solid #EEE", fontSize:13, fontFamily:"inherit", outline:"none", boxSizing:"border-box", marginBottom:10}}
+                />
+                <div style={{marginBottom:10}}>
+                  <div style={{fontSize:10, color:"#999", marginBottom:5}}>繰り返し</div>
+                  <div style={{display:"flex", gap:5}}>
+                    {[{v:"none",l:"なし"},{v:"daily",l:"毎日"},{v:"weekly",l:"毎週"},{v:"monthly",l:"毎月"}].map(r=>(
+                      <button key={r.v} onClick={()=>setNewOp(p=>({...p,repeat:r.v}))}
+                        style={{flex:1, padding:"6px", borderRadius:7, border:"none", fontSize:11, cursor:"pointer", fontFamily:"inherit",
+                          background: newOp.repeat===r.v?"#4ECDC4":"#F0F0F0",
+                          color: newOp.repeat===r.v?"#fff":"#999", fontWeight: newOp.repeat===r.v?700:400}}>
+                        {r.l}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div style={{marginBottom:10}}>
+                  <div style={{fontSize:10, color:"#999", marginBottom:5}}>通知日時（任意）</div>
+                  <input type="datetime-local" value={newOp.notify}
+                    onChange={e=>setNewOp(p=>({...p,notify:e.target.value}))}
+                    style={{width:"100%", padding:"8px 10px", borderRadius:8, border:"1.5px solid #EEE", fontSize:12, fontFamily:"inherit", outline:"none", boxSizing:"border-box"}}
+                  />
+                </div>
+                <div style={{display:"flex", gap:6}}>
+                  <button onClick={()=>{setShowAddOp(false);setNewOp({label:"",repeat:"none",notify:""}); }} style={{flex:1, padding:"9px", borderRadius:10, border:"1.5px solid #EEE", background:"#fff", color:"#999", fontSize:13, cursor:"pointer", fontFamily:"inherit"}}>キャンセル</button>
+                  <button onClick={addOperation} style={{flex:2, padding:"9px", borderRadius:10, border:"none", background:"#4ECDC4", color:"#fff", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit"}}>追加する</button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {activeTab === "input" && (
           <div>
             <div style={{fontSize:11, color:"#999", marginBottom:16}}>今日のクリエイティブ声掛け</div>
@@ -982,7 +1128,7 @@ function App() {
       </div>
 
       <div style={S.footer}>
-        <span>Creative Board — prototype v0.31</span>
+        <span>Creative Board — prototype v0.33</span>
         <button onClick={() => {
           if (window.confirm("データをリセットしますか？")) {
             localStorage.clear();
