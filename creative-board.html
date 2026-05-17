@@ -246,6 +246,10 @@ function App() {
   const [memoInputs, setMemoInputs] = useState({});
   const [openReminder, setOpenReminder] = useState(null);
   const [taskInputs, setTaskInputs] = useState({});
+  const [editTaskId, setEditTaskId] = useState(null);
+  const [editProjectId, setEditProjectId] = useState(null);
+  const [editProjectTitle, setEditProjectTitle] = useState(""); // `${pid}-${tid}`
+  const [editTaskLabel, setEditTaskLabel] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [newPromotion, setNewPromotion] = useState({ label: "", due: "今日" });
   const [showAddPromotion, setShowAddPromotion] = useState(false);
@@ -356,6 +360,24 @@ function App() {
       ...p,
       tasks: [...p.tasks, mkTask(Date.now(), label.trim())]
     }));
+  };
+
+  // プロジェクト名編集
+  const updateProjectTitle = (pid, title) => {
+    if (!title.trim()) return;
+    setProjects(prev => prev.map(p => p.id !== pid ? p : {...p, title: title.trim()}));
+    setEditProjectId(null);
+    setEditProjectTitle("");
+  };
+
+  // タスク名編集
+  const updateTaskLabel = (pid, tid, label) => {
+    if (!label.trim()) return;
+    setProjects(prev => prev.map(p => p.id !== pid ? p : {
+      ...p, tasks: p.tasks.map(t => t.id !== tid ? t : {...t, label: label.trim()})
+    }));
+    setEditTaskId(null);
+    setEditTaskLabel("");
   };
 
   // タスク削除（ソフトデリート：その場でUndo）
@@ -529,7 +551,29 @@ function App() {
                         <div style={{flex:1, paddingTop:4}}>
                           <div style={{display:"flex", alignItems:"center", gap:6, marginBottom:3}}>
                             <div style={{width:8, height:8, borderRadius:"50%", background:project.color, flexShrink:0}} />
-                            <div style={{fontSize:14, fontWeight:700, color:"#1A1A2E", lineHeight:1.3}}>{project.title}</div>
+                            {editProjectId === project.id ? (
+                              <div style={{display:"flex", gap:5, flex:1}} onClick={e=>e.stopPropagation()}>
+                                <input type="text" value={editProjectTitle}
+                                  onChange={e=>setEditProjectTitle(e.target.value)}
+                                  onKeyDown={e=>{
+                                    if(e.key==="Enter") updateProjectTitle(project.id, editProjectTitle);
+                                    if(e.key==="Escape"){setEditProjectId(null);setEditProjectTitle("");}
+                                  }}
+                                  autoFocus
+                                  style={{flex:1, padding:"4px 8px", borderRadius:6, border:`1.5px solid ${project.color}`, fontSize:13, fontFamily:"inherit", outline:"none", fontWeight:700}}
+                                />
+                                <button onClick={()=>updateProjectTitle(project.id, editProjectTitle)}
+                                  style={{padding:"4px 10px", borderRadius:6, border:"none", background:project.color, color:"#fff", fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"inherit"}}>保存</button>
+                                <button onClick={e=>{e.stopPropagation();setEditProjectId(null);setEditProjectTitle("");}}
+                                  style={{padding:"4px 8px", borderRadius:6, border:"1.5px solid #EEE", background:"#fff", color:"#999", fontSize:11, cursor:"pointer", fontFamily:"inherit"}}>✕</button>
+                              </div>
+                            ) : (
+                              <div style={{display:"flex", alignItems:"center", gap:6}}>
+                                <div style={{fontSize:14, fontWeight:700, color:"#1A1A2E", lineHeight:1.3}}>{project.title}</div>
+                                <button onClick={e=>{e.stopPropagation();setEditProjectId(project.id);setEditProjectTitle(project.title);}}
+                                  style={{background:"none", border:"none", color:"#ccc", fontSize:12, cursor:"pointer", padding:0}}>✏️</button>
+                              </div>
+                            )}
                           </div>
                           <div style={{fontSize:10, color:"#999", marginLeft:14}}>{project.client}</div>
                         </div>
@@ -578,14 +622,34 @@ function App() {
                                 <div onClick={() => toggleTask(project.id, task.id)} style={{width:20, height:20, borderRadius:6, flexShrink:0, cursor:"pointer", border: task.done ? "none" : `2px solid ${project.color}`, background: task.done ? project.color : "transparent", display:"flex", alignItems:"center", justifyContent:"center", transition:"all 0.2s"}}>
                                   {task.done && <span style={{color:"#fff", fontSize:11}}>✓</span>}
                                 </div>
-                                <div style={{flex:1, cursor:"pointer"}} onClick={() => !task.pendingDelete && toggleTask(project.id, task.id)}>
-                                  <span style={{fontSize:13, color: task.pendingDelete ? "#ccc" : task.done ? "#bbb" : "#333", textDecoration: task.pendingDelete || task.done ? "line-through" : "none"}}>{task.label}</span>
-                                  {hasR && !task.pendingDelete && (
-                                    <div style={{display:"flex", gap:4, flexWrap:"wrap", marginTop:3}}>
-                                      {task.reminders.start && <span style={{fontSize:9, color:"#4ECDC4", background:"#F0FFFD", borderRadius:4, padding:"1px 5px"}}>▶ {fmtDt(task.reminders.start)}</span>}
-                                      {task.reminders.end && <span style={{fontSize:9, color:"#FF9500", background:"#FFFBF0", borderRadius:4, padding:"1px 5px"}}>■ {fmtDt(task.reminders.end)}</span>}
-                                    </div>
-                                  )}
+                                <div style={{flex:1}}>
+                                {editTaskId === rKey ? (
+                                  <div style={{display:"flex", gap:5}}>
+                                    <input type="text" value={editTaskLabel}
+                                      onChange={e=>setEditTaskLabel(e.target.value)}
+                                      onKeyDown={e=>{
+                                        if(e.key==="Enter") updateTaskLabel(project.id, task.id, editTaskLabel);
+                                        if(e.key==="Escape") { setEditTaskId(null); setEditTaskLabel(""); }
+                                      }}
+                                      autoFocus
+                                      style={{flex:1, padding:"4px 8px", borderRadius:6, border:`1.5px solid ${project.color}`, fontSize:12, fontFamily:"inherit", outline:"none"}}
+                                    />
+                                    <button onClick={()=>updateTaskLabel(project.id, task.id, editTaskLabel)}
+                                      style={{padding:"4px 10px", borderRadius:6, border:"none", background:project.color, color:"#fff", fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"inherit"}}>保存</button>
+                                    <button onClick={()=>{setEditTaskId(null);setEditTaskLabel("");}}
+                                      style={{padding:"4px 8px", borderRadius:6, border:"1.5px solid #EEE", background:"#fff", color:"#999", fontSize:11, cursor:"pointer", fontFamily:"inherit"}}>✕</button>
+                                  </div>
+                                ) : (
+                                  <div onClick={() => !task.pendingDelete && toggleTask(project.id, task.id)} style={{cursor:"pointer"}}>
+                                    <span style={{fontSize:13, color: task.pendingDelete ? "#ccc" : task.done ? "#bbb" : "#333", textDecoration: task.pendingDelete || task.done ? "line-through" : "none"}}>{task.label}</span>
+                                    {hasR && !task.pendingDelete && (
+                                      <div style={{display:"flex", gap:4, flexWrap:"wrap", marginTop:3}}>
+                                        {task.reminders.start && <span style={{fontSize:9, color:"#4ECDC4", background:"#F0FFFD", borderRadius:4, padding:"1px 5px"}}>▶ {fmtDt(task.reminders.start)}</span>}
+                                        {task.reminders.end && <span style={{fontSize:9, color:"#FF9500", background:"#FFFBF0", borderRadius:4, padding:"1px 5px"}}>■ {fmtDt(task.reminders.end)}</span>}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
                                 </div>
                                 {task.pendingDelete ? (
                                   <div style={{display:"flex", gap:5}}>
@@ -607,6 +671,8 @@ function App() {
                                     <button onClick={() => setOpenReminder(isROpen ? null : rKey)} style={{background: isROpen ? "#F0F0F0" : "transparent", border:"none", borderRadius:8, padding:"5px 6px", cursor:"pointer", display:"flex", alignItems:"center"}}>
                                       <Bell active={!!hasR} color={project.color} />
                                     </button>
+                                    <button onClick={()=>{setEditTaskId(rKey); setEditTaskLabel(task.label);}}
+                                      style={{background:"none", border:"none", color:"#ccc", fontSize:13, cursor:"pointer", padding:"0 2px"}}>✏️</button>
                                     <button onClick={()=>deleteTask(project.id, task.id)} style={{background:"none", border:"none", color:"#ddd", fontSize:15, cursor:"pointer", padding:"0 2px", lineHeight:1}}>×</button>
                                   </>
                                 )}
@@ -916,7 +982,7 @@ function App() {
       </div>
 
       <div style={S.footer}>
-        <span>Creative Board — prototype v0.29</span>
+        <span>Creative Board — prototype v0.31</span>
         <button onClick={() => {
           if (window.confirm("データをリセットしますか？")) {
             localStorage.clear();
