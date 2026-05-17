@@ -57,25 +57,10 @@ const PROJECT_EMOJIS = [
 
 const INITIAL_PROJECTS = [
   {
-    id: 1, title: "VTuberキャラデザ", emoji: "🎨", client: "クライアントA",
-    deadline: new Date(Date.now() + 3 * 86400000), color: "#FF6B6B",
-    tasks: [mkTask(1,"ラフ提案",true), mkTask(2,"修正対応",true), mkTask(3,"清書"), mkTask(4,"納品データ整理")],
-    memos: [{ id: 1, text: "ラフ2案出し済み、Bパターンで進行", date: "2026/05/10" }],
-    
-  },
-  {
-    id: 2, title: "Live2Dモデリング", emoji: "🖥️", client: "クライアントB",
-    deadline: new Date(Date.now() + 10 * 86400000), color: "#4ECDC4",
-    tasks: [mkTask(1,"パーツ分け",true), mkTask(2,"メッシュ設定"), mkTask(3,"パラメータ設定"), mkTask(4,"物理演算"), mkTask(5,"書き出し・確認")],
+    id: 1, title: "ここにプロジェクト名を記入", emoji: "🎨", client: "クライアント名",
+    deadline: new Date(Date.now() + 7 * 86400000), color: "#FF6B6B",
+    tasks: [mkTask(1,"タスク1"), mkTask(2,"タスク2"), mkTask(3,"タスク3"), mkTask(4,"タスク4")],
     memos: [],
-    
-  },
-  {
-    id: 3, title: "カットイラスト制作", emoji: "✏️", client: "クライアントC",
-    deadline: new Date(Date.now() + 21 * 86400000), color: "#A29BFE",
-    tasks: [mkTask(1,"ラフ"), mkTask(2,"線画"), mkTask(3,"彩色")],
-    memos: [],
-    
   },
 ];
 
@@ -1128,7 +1113,7 @@ function App() {
       </div>
 
       <div style={S.footer}>
-        <span>Creative Board — prototype v0.33</span>
+        <span>Creative Board — prototype v0.35</span>
         <button onClick={() => {
           if (window.confirm("データをリセットしますか？")) {
             localStorage.clear();
