@@ -402,7 +402,7 @@ function App() {
                   {editProjectId===project.id ? (
                     <div style={{display:"flex",gap:5,flex:1}} onClick={e=>e.stopPropagation()}>
                       <input type="text" value={editProjectTitle} onChange={e=>setEditProjectTitle(e.target.value)}
-                        onKeyDown={e=>{if(e.key==="Enter")updateProjectTitle(project.id,editProjectTitle);if(e.key==="Escape"){setEditProjectId(null);setEditProjectTitle("");}}}
+                        onKeyDown={e=>{e.stopPropagation();if(e.key==="Enter")updateProjectTitle(project.id,editProjectTitle);if(e.key==="Escape"){setEditProjectId(null);setEditProjectTitle("");}}}
                         autoFocus style={{flex:1,padding:"4px 8px",borderRadius:6,border:`1.5px solid ${project.color}`,fontSize:13,outline:"none",fontWeight:700}}/>
                       <button onClick={()=>updateProjectTitle(project.id,editProjectTitle)} style={{padding:"4px 10px",borderRadius:6,border:"none",background:project.color,color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer"}}>保存</button>
                       <button onClick={e=>{e.stopPropagation();setEditProjectId(null);setEditProjectTitle("");}} style={{padding:"4px 8px",borderRadius:6,border:"1.5px solid #EEE",background:"#fff",color:"#999",fontSize:11,cursor:"pointer"}}>✕</button>
@@ -465,7 +465,7 @@ function App() {
                         {editTaskId===rKey(task.id) ? (
                           <div style={{display:"flex",gap:5}}>
                             <input type="text" value={editTaskLabel} onChange={e=>setEditTaskLabel(e.target.value)}
-                              onKeyDown={e=>{if(e.key==="Enter")updateTaskLabel(project.id,task.id,editTaskLabel);if(e.key==="Escape"){setEditTaskId(null);setEditTaskLabel("");}}}
+                              onKeyDown={e=>{e.stopPropagation();if(e.key==="Enter")updateTaskLabel(project.id,task.id,editTaskLabel);if(e.key==="Escape"){setEditTaskId(null);setEditTaskLabel("");}}}
                               autoFocus style={{flex:1,padding:"4px 8px",borderRadius:6,border:`1.5px solid ${project.color}`,fontSize:12,outline:"none"}}/>
                             <button onClick={()=>updateTaskLabel(project.id,task.id,editTaskLabel)} style={{padding:"4px 10px",borderRadius:6,border:"none",background:project.color,color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer"}}>保存</button>
                             <button onClick={()=>{setEditTaskId(null);setEditTaskLabel("");}} style={{padding:"4px 8px",borderRadius:6,border:"1.5px solid #EEE",background:"#fff",color:"#999",fontSize:11,cursor:"pointer"}}>✕</button>
@@ -522,7 +522,7 @@ function App() {
               <div style={{display:"flex",gap:6,marginTop:8}}>
                 <input type="text" placeholder="タスクを追加…" value={taskInputs[project.id]||""}
                   onChange={e=>setTaskInputs(p=>({...p,[project.id]:e.target.value}))}
-                  onKeyDown={e=>{if(e.key==="Enter"){addTask(project.id,taskInputs[project.id]||"");setTaskInputs(p=>({...p,[project.id]:""}));}}}
+                  onKeyDown={e=>{e.stopPropagation();if(e.key==="Enter"){addTask(project.id,taskInputs[project.id]||"");setTaskInputs(p=>({...p,[project.id]:""}));}}}
                   style={{flex:1,padding:"7px 10px",borderRadius:8,border:"1.5px solid #E8E8E8",fontSize:12,outline:"none"}}/>
                 <button onClick={()=>{addTask(project.id,taskInputs[project.id]||"");setTaskInputs(p=>({...p,[project.id]:""}));}} style={{padding:"7px 12px",borderRadius:8,border:"none",background:project.color,color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer"}}>＋</button>
               </div>
@@ -532,11 +532,11 @@ function App() {
               <div style={{display:"flex",gap:8,marginBottom:6}}>
                 <textarea placeholder="メモを入力…" value={memoInputs[project.id]||""} rows={2}
                   onChange={e=>setMemoInputs(p=>({...p,[project.id]:e.target.value}))}
-                  onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();addMemo(project.id);}}}
+                  onKeyDown={e=>e.stopPropagation()}
                   style={{flex:1,padding:"8px 10px",borderRadius:10,border:"1.5px solid #E8E8E8",fontSize:12,outline:"none",resize:"none",lineHeight:1.5}}/>
                 <button onClick={()=>addMemo(project.id)} style={{padding:"8px 12px",borderRadius:10,border:"none",background:project.color,color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",alignSelf:"flex-end"}}>追加</button>
               </div>
-              <div style={{fontSize:9,color:"#ccc",marginBottom:10}}>Enterで追加 / Shift+Enterで改行</div>
+              
               {project.memos.length===0
                 ?<div style={{fontSize:12,color:"#ccc",textAlign:"center",padding:"8px 0"}}>まだメモがありません</div>
                 :project.memos.map(memo=>(
@@ -888,7 +888,7 @@ function App() {
       </div>
 
       <div style={S.footer}>
-        <span>Creative Board — v0.44</span>
+        <span>Creative Board — v0.45</span>
         <button onClick={()=>{if(window.confirm("データをリセットしますか？")){localStorage.clear();window.location.reload();}}} style={{marginLeft:12,background:"none",border:"none",color:"#CCC",fontSize:10,cursor:"pointer",textDecoration:"underline"}}>リセット</button>
       </div>
     </div>
