@@ -144,15 +144,15 @@ const EmojiChar = ({ pct, emoji }) => {
   }[state];
 
   return (
-    <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,minWidth:56}}>
+    <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2,minWidth:44}}>
       <div style={{position:"relative"}}>
         {state==="done" && <div style={{position:"absolute",top:-10,left:"50%",transform:"translateX(-50%)",fontSize:9,whiteSpace:"nowrap",animation:"starPop 0.4s ease both"}}>✨✨</div>}
         {state==="almost" && <div style={{position:"absolute",top:-4,right:-8,fontSize:10,animation:"float 0.8s ease-in-out infinite"}}>💦</div>}
-        <div style={{width:48,height:48,borderRadius:14,background:bgColor,display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,transform:transforms[frame],transition:"transform 0.15s ease"}}>
+        <div style={{width:36,height:36,borderRadius:10,background:bgColor,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,transform:transforms[frame],transition:"transform 0.15s ease"}}>
           {emoji}
         </div>
       </div>
-      <div style={{fontSize:8,color:"#aaa",textAlign:"center",lineHeight:1.3,maxWidth:56}}>{msg}</div>
+      <div style={{fontSize:7,color:"#aaa",textAlign:"center",lineHeight:1.3,maxWidth:44}}>{msg}</div>
     </div>
   );
 };
@@ -375,7 +375,7 @@ function App() {
     toast: { background:"#1A1A2E", color:"#fff", borderRadius:12, padding:"12px 16px", marginBottom:8, fontSize:13, fontWeight:600, boxShadow:"0 4px 20px rgba(0,0,0,0.25)", animation:"slideDown 0.3s ease" },
     header: { background:headerColor, padding:"20px 20px 16px", position:"sticky", top:0, zIndex:100 },
     tab: (active) => ({ flex:1, padding:"7px 0", borderRadius:8, border:"none", cursor:"pointer", fontSize:11, fontWeight:600, transition:"all 0.2s", background:active?"#fff":"transparent", color:active?"#1A1A2E":headerSubColor }),
-    card: (urgent) => ({ background:"#fff", borderRadius:16, marginBottom:12, overflow:"hidden", boxShadow:"0 2px 12px rgba(0,0,0,0.06)", border:urgent?"1.5px solid #FF4444":"1.5px solid transparent" }),
+    card: (urgent) => ({ background:"#fff", borderRadius:12, marginBottom:7, overflow:"hidden", boxShadow:"0 1px 8px rgba(0,0,0,0.06)", border:urgent?"1.5px solid #FF4444":"1.5px solid transparent" }),
     notifBanner: { background:"#FFF8E7", border:"1.5px solid #FFD93D", borderRadius:12, padding:"10px 14px", marginBottom:12, display:"flex", alignItems:"center", justifyContent:"space-between" },
     input: { width:"100%", padding:"9px 10px", borderRadius:8, border:"1.5px solid #E0E0E0", fontSize:12, outline:"none", boxSizing:"border-box" },
     footer: { position:"fixed", bottom:0, left:"50%", transform:"translateX(-50%)", width:"100%", maxWidth:430, background:"rgba(247,245,242,0.95)", backdropFilter:"blur(10px)", borderTop:"1px solid #EEE", padding:"10px 16px 20px", textAlign:"center", fontSize:10, color:"#CCC" },
@@ -390,7 +390,7 @@ function App() {
 
     return (
       <div key={project.id} style={S.card(days<=3)}>
-        <div onClick={() => setExpandedId(isExpanded?null:project.id)} style={{padding:16,cursor:"pointer"}}>
+        <div onClick={() => setExpandedId(isExpanded?null:project.id)} style={{padding:"10px 12px",cursor:"pointer"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
             <div style={{display:"flex",alignItems:"flex-start",gap:10,flex:1}}>
               <div style={{flexShrink:0}}>
@@ -409,31 +409,31 @@ function App() {
                     </div>
                   ) : (
                     <div style={{display:"flex",alignItems:"center",gap:6}}>
-                      <div style={{fontSize:14,fontWeight:700,color:"#1A1A2E",lineHeight:1.3}}>{project.title}</div>
+                      <div style={{fontSize:13,fontWeight:700,color:"#1A1A2E",lineHeight:1.3}}>{project.title}</div>
                       <button onClick={e=>{e.stopPropagation();setEditProjectId(project.id);setEditProjectTitle(project.title);}} style={{background:"none",border:"none",color:"#ccc",fontSize:12,cursor:"pointer",padding:0}}>✏️</button>
                     </div>
                   )}
                 </div>
-                <div style={{fontSize:10,color:"#999",marginLeft:14}}>{project.client}</div>
+                <div style={{fontSize:9,color:"#999",marginLeft:12}}>{project.client}</div>
               </div>
             </div>
             <div style={{textAlign:"right",flexShrink:0}}>
-              <div style={{background:urgency.bg,color:urgency.accent,borderRadius:8,padding:"4px 10px",fontSize:12,fontWeight:700}}>
+              <div style={{background:urgency.bg,color:urgency.accent,borderRadius:8,padding:"3px 8px",fontSize:11,fontWeight:700}}>
                 {days<=0?"期限超過!":`残り${days}日`}
               </div>
-              <div style={{fontSize:10,color:"#bbb",marginTop:3}}>{urgency.label}</div>
+              <div style={{fontSize:9,color:"#bbb",marginTop:2}}>{urgency.label}</div>
             </div>
           </div>
-          <div style={{marginTop:12}}>
+          <div style={{marginTop:6}}>
             <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
-              <div style={{fontSize:10,color:"#bbb"}}>{project.tasks.filter(t=>t.done).length}/{project.tasks.length} タスク完了</div>
-              <div style={{fontSize:10,fontWeight:700,color:project.color}}>{progress}%</div>
+              <div style={{fontSize:9,color:"#bbb"}}>{project.tasks.filter(t=>t.done).length}/{project.tasks.length} 完了</div>
+              <div style={{fontSize:9,fontWeight:700,color:project.color}}>{progress}%</div>
             </div>
-            <div style={{height:6,background:"#F0F0F0",borderRadius:10,overflow:"hidden"}}>
+            <div style={{height:4,background:"#F0F0F0",borderRadius:10,overflow:"hidden"}}>
               <div style={{height:"100%",width:`${progress}%`,background:project.color,borderRadius:10,transition:"width 0.4s ease"}} />
             </div>
           </div>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:8}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:4}}>
             {confirmDeleteId===project.id ? (
               <div onClick={e=>e.stopPropagation()} style={{display:"flex",alignItems:"center",gap:6}}>
                 <span style={{fontSize:10,color:"#FF4444"}}>本当に削除？</span>
@@ -441,9 +441,9 @@ function App() {
                 <button onClick={e=>{e.stopPropagation();setConfirmDeleteId(null);}} style={{background:"#EEE",border:"none",borderRadius:6,padding:"3px 8px",color:"#999",fontSize:10,cursor:"pointer"}}>キャンセル</button>
               </div>
             ) : (
-              <button onClick={e=>{e.stopPropagation();setConfirmDeleteId(project.id);}} style={{background:"none",border:"none",color:"#ddd",fontSize:11,cursor:"pointer",padding:0}}>🗑 削除</button>
+              <button onClick={e=>{e.stopPropagation();setConfirmDeleteId(project.id);}} style={{background:"none",border:"none",color:"#ddd",fontSize:10,cursor:"pointer",padding:0}}>🗑 削除</button>
             )}
-            <div style={{fontSize:10,color:"#ccc"}}>{isExpanded?"▲ 閉じる":"▼ タスクを見る"}</div>
+            <div style={{fontSize:9,color:"#ccc"}}>{isExpanded?"▲ 閉じる":"▼ 開く"}</div>
           </div>
         </div>
 
@@ -888,7 +888,7 @@ function App() {
       </div>
 
       <div style={S.footer}>
-        <span>Creative Board — v0.45</span>
+        <span>Creative Board — v0.46</span>
         <button onClick={()=>{if(window.confirm("データをリセットしますか？")){localStorage.clear();window.location.reload();}}} style={{marginLeft:12,background:"none",border:"none",color:"#CCC",fontSize:10,cursor:"pointer",textDecoration:"underline"}}>リセット</button>
       </div>
     </div>
