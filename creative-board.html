@@ -203,6 +203,7 @@ function App() {
   const [showAdd, setShowAdd] = useState(false);
   const [newP, setNewP] = useState({title:"",client:"",startDate:"",endDate:"",emoji:"🎨",tags:[]});
   const [tagInput, setTagInput] = useState("");
+  const [cardTagInputs, setCardTagInputs] = useState({});
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [editProjectId, setEditProjectId] = useState(null);
   const [editProjectTitle, setEditProjectTitle] = useState("");
@@ -357,6 +358,15 @@ function App() {
     setShowAdd(false);
   };
 
+  const addTag = (pid, tag) => {
+    if (!tag.trim()) return;
+    setProjects(prev => prev.map(p => p.id!==pid ? p : {...p, tags:[...(p.tags||[]), tag.trim()]}));
+    setCardTagInputs(prev => ({...prev, [pid]:""}));
+  };
+  const removeTag = (pid, idx) => {
+    setProjects(prev => prev.map(p => p.id!==pid ? p : {...p, tags:(p.tags||[]).filter((_,i)=>i!==idx)}));
+  };
+
   const addMemo = (pid) => {
     const text = (memoInputs[pid]||"").trim();
     if (!text) return;
@@ -476,6 +486,27 @@ function App() {
                 <button onClick={e=>{e.stopPropagation();setConfirmDeleteId(project.id);}} style={{background:"none",border:"none",color:"#ddd",fontSize:10,cursor:"pointer",padding:0}}>🗑 削除</button>
               )}
             </div>
+            {/* タグ編集 */}
+            <div style={{padding:"8px 12px 4px",borderBottom:"1px solid #F0F0F0"}}>
+              <div style={{fontSize:10,color:"#bbb",marginBottom:5,letterSpacing:0.5}}>タグ</div>
+              <div style={{display:"flex",gap:4,flexWrap:"wrap",marginBottom:5}}>
+                {(project.tags||[]).map((tag,i)=>(
+                  <span key={i} style={{fontSize:10,padding:"2px 7px",borderRadius:6,background:["#FF6B6B22","#4ECDC422","#A29BFE22","#FFD93D22","#F8A5C222","#74B9FF22"][i%6],color:["#FF6B6B","#4ECDC4","#A29BFE","#CC9900","#D4608A","#2980B9"][i%6],fontWeight:600,display:"flex",alignItems:"center",gap:4}}>
+                    {tag}
+                    <span onClick={()=>removeTag(project.id,i)} style={{cursor:"pointer",opacity:0.5,fontSize:11}}>×</span>
+                  </span>
+                ))}
+              </div>
+              <div style={{display:"flex",gap:5}}>
+                <input type="text" placeholder="タグを追加…" value={cardTagInputs[project.id]||""}
+                  onChange={e=>setCardTagInputs(p=>({...p,[project.id]:e.target.value}))}
+                  onKeyDown={e=>{e.stopPropagation();if(e.key==="Enter"&&(cardTagInputs[project.id]||"").trim()){addTag(project.id,cardTagInputs[project.id]);}}}
+                  style={{flex:1,padding:"5px 8px",borderRadius:7,border:"1.5px solid #E8E8E8",fontSize:11,outline:"none"}}/>
+                <button onClick={()=>addTag(project.id,cardTagInputs[project.id]||"")}
+                  style={{padding:"5px 10px",borderRadius:7,border:"none",background:project.color,color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer"}}>＋</button>
+              </div>
+            </div>
+
             <div style={{padding:"8px 12px 8px"}}>
               <div style={{fontSize:10,color:"#bbb",marginBottom:6,letterSpacing:0.5}}>タスク</div>
               {project.tasks.map(task => {
@@ -934,7 +965,7 @@ function App() {
       </div>
 
       <div style={S.footer}>
-        <span>Creative Board — v0.55</span>
+        <span>Creative Board — v0.56</span>
         <button onClick={()=>{if(window.confirm("データをリセットしますか？")){localStorage.clear();window.location.reload();}}} style={{marginLeft:12,background:"none",border:"none",color:"#CCC",fontSize:10,cursor:"pointer",textDecoration:"underline"}}>リセット</button>
       </div>
     </div>
