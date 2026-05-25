@@ -58,7 +58,7 @@ const mkTask = (id, label, done=false) => ({
 
 const INITIAL_PROJECTS = [
   {
-    id:1, title:"ここにプロジェクト名を記入", emoji:"🎨", client:"クライアント名",
+    id:1, title:"ここにプロジェクト名を記入", emoji:"🎨", tags:[],
     deadline: new Date(Date.now() + 7*86400000), color:"#FF6B6B",
     tasks: [mkTask(1,"タスク1"), mkTask(2,"タスク2"), mkTask(3,"タスク3"), mkTask(4,"タスク4")],
     memos: [],
@@ -97,6 +97,15 @@ const fmtDt = (iso) => {
   const d = new Date(iso);
   return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
 };
+const fmtDate = (d) => {
+  const dt = new Date(d);
+  return `${dt.getFullYear()}/${String(dt.getMonth()+1).padStart(2,"0")}/${String(dt.getDate()).padStart(2,"0")}`;
+};
+const toDateInput = (d) => {
+  const dt = new Date(d);
+  return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}-${String(dt.getDate()).padStart(2,"0")}`;
+};
+
 const fmtDue = (due) => {
   if (!due) return "";
   if (/^\d{4}-\d{2}-\d{2}/.test(due)) {
@@ -164,6 +173,7 @@ function App() {
       if (!saved) return fallback;
       const parsed = JSON.parse(saved);
       if (key === "cb_projects") return parsed.map(p => ({
+        tags: p.tags || (p.client ? [p.client] : []),
         ...p,
         deadline: new Date(p.deadline),
         startDate: p.startDate ? new Date(p.startDate) : null,
@@ -191,10 +201,12 @@ function App() {
   const [undoStack, setUndoStack] = useState([]);
 
   const [showAdd, setShowAdd] = useState(false);
-  const [newP, setNewP] = useState({title:"",client:"",startDate:"",endDate:"",emoji:"🎨"});
+  const [newP, setNewP] = useState({title:"",client:"",startDate:"",endDate:"",emoji:"🎨",tags:[]});
+  const [tagInput, setTagInput] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [editProjectId, setEditProjectId] = useState(null);
   const [editProjectTitle, setEditProjectTitle] = useState("");
+  const [editDeadlineVal, setEditDeadlineVal] = useState("");
 
   const [openReminder, setOpenReminder] = useState(null);
   const [taskInputs, setTaskInputs] = useState({});
@@ -315,10 +327,16 @@ function App() {
     setProjects(prev=>prev.map(p=>p.id!==pid?p:{...p,tasks:p.tasks.map(t=>t.id!==tid?t:{...t,label:label.trim()})}));
     setEditTaskId(null); setEditTaskLabel("");
   };
-  const updateProjectTitle = (pid,title) => {
+  const updateProjectInfo = (pid, title, deadlineStr) => {
     if (!title.trim()) return;
-    setProjects(prev=>prev.map(p=>p.id!==pid?p:{...p,title:title.trim()}));
-    setEditProjectId(null); setEditProjectTitle("");
+    setProjects(prev => prev.map(p => p.id!==pid ? p : {
+      ...p,
+      title: title.trim(),
+      deadline: deadlineStr ? new Date(deadlineStr) : p.deadline,
+    }));
+    setEditProjectId(null);
+    setEditProjectTitle("");
+    setEditDeadlineVal("");
   };
   const deleteProject = (pid) => {
     setProjects(prev=>prev.filter(p=>p.id!==pid));
@@ -328,13 +346,14 @@ function App() {
   const addProject = () => {
     if (!newP.title || !newP.endDate) return;
     setProjects(prev=>[...prev,{
-      id:Date.now(), title:newP.title, emoji:newP.emoji||"🎨", client:newP.client||"未設定",
+      id:Date.now(), title:newP.title, emoji:newP.emoji||"🎨", tags:newP.tags||[],
       deadline:new Date(newP.endDate),
       startDate:newP.startDate?new Date(newP.startDate):null,
       color:["#FF6B6B","#4ECDC4","#A29BFE","#FFD93D","#F8A5C2"][Math.floor(Math.random()*5)],
       tasks:[mkTask(1,"タスク1")], memos:[],
     }]);
-    setNewP({title:"",client:"",startDate:"",endDate:"",emoji:"🎨"});
+    setNewP({title:"",client:"",startDate:"",endDate:"",emoji:"🎨",tags:[]});
+    setTagInput("");
     setShowAdd(false);
   };
 
@@ -375,7 +394,7 @@ function App() {
     toast: { background:"#1A1A2E", color:"#fff", borderRadius:12, padding:"12px 16px", marginBottom:8, fontSize:13, fontWeight:600, boxShadow:"0 4px 20px rgba(0,0,0,0.25)", animation:"slideDown 0.3s ease" },
     header: { background:headerColor, padding:"20px 20px 16px", position:"sticky", top:0, zIndex:100 },
     tab: (active) => ({ flex:1, padding:"7px 0", borderRadius:8, border:"none", cursor:"pointer", fontSize:11, fontWeight:600, transition:"all 0.2s", background:active?"#fff":"transparent", color:active?"#1A1A2E":headerSubColor }),
-    card: (urgent) => ({ background:"#fff", borderRadius:12, marginBottom:7, overflow:"hidden", boxShadow:"0 1px 8px rgba(0,0,0,0.06)", border:urgent?"1.5px solid #FF4444":"1.5px solid transparent" }),
+    card: (urgent) => ({ background:"#fff", borderRadius:10, marginBottom:5, overflow:"hidden", boxShadow:"0 1px 6px rgba(0,0,0,0.06)", border:urgent?"1.5px solid #FF4444":"1.5px solid transparent" }),
     notifBanner: { background:"#FFF8E7", border:"1.5px solid #FFD93D", borderRadius:12, padding:"10px 14px", marginBottom:12, display:"flex", alignItems:"center", justifyContent:"space-between" },
     input: { width:"100%", padding:"9px 10px", borderRadius:8, border:"1.5px solid #E0E0E0", fontSize:12, outline:"none", boxSizing:"border-box" },
     footer: { position:"fixed", bottom:0, left:"50%", transform:"translateX(-50%)", width:"100%", maxWidth:430, background:"rgba(247,245,242,0.95)", backdropFilter:"blur(10px)", borderTop:"1px solid #EEE", padding:"10px 16px 20px", textAlign:"center", fontSize:10, color:"#CCC" },
@@ -400,56 +419,64 @@ function App() {
                 <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:3}}>
                   <div style={{width:8,height:8,borderRadius:"50%",background:project.color,flexShrink:0}} />
                   {editProjectId===project.id ? (
-                    <div style={{display:"flex",gap:5,flex:1}} onClick={e=>e.stopPropagation()}>
+                    <div onClick={e=>e.stopPropagation()} style={{flex:1}}>
                       <input type="text" value={editProjectTitle} onChange={e=>setEditProjectTitle(e.target.value)}
-                        onKeyDown={e=>{e.stopPropagation();if(e.key==="Enter")updateProjectTitle(project.id,editProjectTitle);if(e.key==="Escape"){setEditProjectId(null);setEditProjectTitle("");}}}
-                        autoFocus style={{flex:1,padding:"4px 8px",borderRadius:6,border:`1.5px solid ${project.color}`,fontSize:13,outline:"none",fontWeight:700}}/>
-                      <button onClick={()=>updateProjectTitle(project.id,editProjectTitle)} style={{padding:"4px 10px",borderRadius:6,border:"none",background:project.color,color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer"}}>保存</button>
-                      <button onClick={e=>{e.stopPropagation();setEditProjectId(null);setEditProjectTitle("");}} style={{padding:"4px 8px",borderRadius:6,border:"1.5px solid #EEE",background:"#fff",color:"#999",fontSize:11,cursor:"pointer"}}>✕</button>
+                        onKeyDown={e=>{e.stopPropagation();if(e.key==="Escape"){setEditProjectId(null);setEditProjectTitle("");setEditDeadlineVal("");}}}
+                        autoFocus style={{width:"100%",padding:"4px 8px",borderRadius:6,border:`1.5px solid ${project.color}`,fontSize:13,outline:"none",fontWeight:700,boxSizing:"border-box",marginBottom:5}}/>
+                      <div style={{display:"flex",gap:5,alignItems:"center"}}>
+                        <span style={{fontSize:10,color:"#999",whiteSpace:"nowrap"}}>期限</span>
+                        <input type="date" value={editDeadlineVal} onChange={e=>setEditDeadlineVal(e.target.value)}
+                          style={{flex:1,padding:"3px 6px",borderRadius:6,border:"1.5px solid #EEE",fontSize:11,outline:"none"}}/>
+                        <button onClick={()=>updateProjectInfo(project.id,editProjectTitle,editDeadlineVal)} style={{padding:"4px 8px",borderRadius:6,border:"none",background:project.color,color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>保存</button>
+                        <button onClick={e=>{e.stopPropagation();setEditProjectId(null);setEditProjectTitle("");setEditDeadlineVal("");}} style={{padding:"4px 6px",borderRadius:6,border:"1.5px solid #EEE",background:"#fff",color:"#999",fontSize:11,cursor:"pointer"}}>✕</button>
+                      </div>
                     </div>
                   ) : (
                     <div style={{display:"flex",alignItems:"center",gap:6}}>
                       <div style={{fontSize:13,fontWeight:700,color:"#1A1A2E",lineHeight:1.3}}>{project.title}</div>
-                      <button onClick={e=>{e.stopPropagation();setEditProjectId(project.id);setEditProjectTitle(project.title);}} style={{background:"none",border:"none",color:"#ccc",fontSize:12,cursor:"pointer",padding:0}}>✏️</button>
+                      <button onClick={e=>{e.stopPropagation();setEditProjectId(project.id);setEditProjectTitle(project.title);setEditDeadlineVal(toDateInput(project.deadline));}} style={{background:"none",border:"none",color:"#ccc",fontSize:12,cursor:"pointer",padding:0}}>✏️</button>
                     </div>
                   )}
                 </div>
-                <div style={{fontSize:9,color:"#999",marginLeft:12}}>{project.client}</div>
+                <div style={{display:"flex",gap:3,flexWrap:"wrap",marginLeft:12,marginTop:1}}>
+                  {(project.tags||[]).map((tag,i)=>(
+                    <span key={i} style={{fontSize:8,padding:"1px 5px",borderRadius:4,background:["#FF6B6B22","#4ECDC422","#A29BFE22","#FFD93D22","#F8A5C222","#74B9FF22"][i%6],color:["#FF6B6B","#4ECDC4","#A29BFE","#CC9900","#D4608A","#2980B9"][i%6],fontWeight:600,whiteSpace:"nowrap"}}>{tag}</span>
+                  ))}
+                </div>
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:6}}>
+                <div style={{flex:1,height:3,background:"#F0F0F0",borderRadius:10,overflow:"hidden"}}>
+                  <div style={{height:"100%",width:`${progress}%`,background:project.color,borderRadius:10,transition:"width 0.4s ease"}} />
+                </div>
+                <div style={{fontSize:8,fontWeight:700,color:project.color,flexShrink:0}}>{progress}%</div>
               </div>
             </div>
-            <div style={{textAlign:"right",flexShrink:0}}>
-              <div style={{background:urgency.bg,color:urgency.accent,borderRadius:8,padding:"3px 8px",fontSize:11,fontWeight:700}}>
-                {days<=0?"期限超過!":`残り${days}日`}
+            <div style={{flexShrink:0,textAlign:"right"}}>
+              <div style={{background:urgency.bg,color:urgency.accent,borderRadius:6,padding:"2px 7px",fontSize:10,fontWeight:700,whiteSpace:"nowrap"}}>
+                {days<=0?"超過!":`残り${days}日`}
               </div>
-              <div style={{fontSize:9,color:"#bbb",marginTop:2}}>{urgency.label}</div>
+              <div style={{fontSize:8,color:"#bbb",marginTop:1}}>{fmtDate(project.deadline)}</div>
             </div>
           </div>
-          <div style={{marginTop:6}}>
-            <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
-              <div style={{fontSize:9,color:"#bbb"}}>{project.tasks.filter(t=>t.done).length}/{project.tasks.length} 完了</div>
-              <div style={{fontSize:9,fontWeight:700,color:project.color}}>{progress}%</div>
-            </div>
-            <div style={{height:4,background:"#F0F0F0",borderRadius:10,overflow:"hidden"}}>
-              <div style={{height:"100%",width:`${progress}%`,background:project.color,borderRadius:10,transition:"width 0.4s ease"}} />
-            </div>
-          </div>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:4}}>
-            {confirmDeleteId===project.id ? (
-              <div onClick={e=>e.stopPropagation()} style={{display:"flex",alignItems:"center",gap:6}}>
-                <span style={{fontSize:10,color:"#FF4444"}}>本当に削除？</span>
-                <button onClick={e=>{e.stopPropagation();deleteProject(project.id);setConfirmDeleteId(null);}} style={{background:"#FF4444",border:"none",borderRadius:6,padding:"3px 8px",color:"#fff",fontSize:10,cursor:"pointer"}}>削除</button>
-                <button onClick={e=>{e.stopPropagation();setConfirmDeleteId(null);}} style={{background:"#EEE",border:"none",borderRadius:6,padding:"3px 8px",color:"#999",fontSize:10,cursor:"pointer"}}>キャンセル</button>
-              </div>
-            ) : (
-              <button onClick={e=>{e.stopPropagation();setConfirmDeleteId(project.id);}} style={{background:"none",border:"none",color:"#ddd",fontSize:10,cursor:"pointer",padding:0}}>🗑 削除</button>
-            )}
-            <div style={{fontSize:9,color:"#ccc"}}>{isExpanded?"▲ 閉じる":"▼ 開く"}</div>
+          <div style={{display:"flex",justifyContent:"flex-end",alignItems:"center",marginTop:2}}>
+            <div style={{fontSize:8,color:"#ccc"}}>{isExpanded?"▲ 閉じる":"▼ 開く"}</div>
           </div>
         </div>
 
         {isExpanded && (
           <div style={{borderTop:"1px solid #F5F5F5",background:"#FAFAFA"}}>
-            <div style={{padding:"12px 16px 8px"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 12px 0"}}>
+              {confirmDeleteId===project.id ? (
+                <div onClick={e=>e.stopPropagation()} style={{display:"flex",alignItems:"center",gap:6}}>
+                  <span style={{fontSize:10,color:"#FF4444"}}>本当に削除？</span>
+                  <button onClick={e=>{e.stopPropagation();deleteProject(project.id);setConfirmDeleteId(null);}} style={{background:"#FF4444",border:"none",borderRadius:6,padding:"3px 8px",color:"#fff",fontSize:10,cursor:"pointer"}}>削除</button>
+                  <button onClick={e=>{e.stopPropagation();setConfirmDeleteId(null);}} style={{background:"#EEE",border:"none",borderRadius:6,padding:"3px 8px",color:"#999",fontSize:10,cursor:"pointer"}}>キャンセル</button>
+                </div>
+              ) : (
+                <button onClick={e=>{e.stopPropagation();setConfirmDeleteId(project.id);}} style={{background:"none",border:"none",color:"#ddd",fontSize:10,cursor:"pointer",padding:0}}>🗑 削除</button>
+              )}
+            </div>
+            <div style={{padding:"8px 12px 8px"}}>
               <div style={{fontSize:10,color:"#bbb",marginBottom:6,letterSpacing:0.5}}>タスク</div>
               {project.tasks.map(task => {
                 const isROpen = openReminder===rKey(task.id);
@@ -598,10 +625,20 @@ function App() {
             <div style={{background:headerTextColor==="#1A1A2E"?"rgba(0,0,0,0.1)":"rgba(255,255,255,0.1)",color:headerTextColor,borderRadius:20,padding:"4px 10px",fontSize:11}}>{projects.length}件稼働中</div>
           </div>
         </div>
-        <div style={{display:"flex",gap:4,marginTop:14}}>
+        <div style={{display:"flex",gap:4,marginTop:14,alignItems:"center"}}>
           {[{id:"dashboard",label:"案件"},{id:"promotion",label:"発信"},{id:"operation",label:"運営"},{id:"input",label:"インプット"}].map(tab=>(
             <button key={tab.id} onClick={()=>setActiveTab(tab.id)} style={S.tab(activeTab===tab.id)}>{tab.label}</button>
           ))}
+          {activeTab==="dashboard" && (
+            <div style={{display:"flex",gap:2,marginLeft:4,background:"rgba(255,255,255,0.1)",borderRadius:8,padding:2,flexShrink:0}}>
+              {[{id:"section",label:"≡"},{id:"active",label:"▶"}].map(col=>(
+                <button key={col.id} onClick={()=>setKanbanCol(col.id)} title={col.id==="section"?"セクション":"進行中のみ"}
+                  style={{width:24,height:24,borderRadius:6,border:"none",cursor:"pointer",fontSize:13,fontWeight:700,transition:"all 0.15s",background:kanbanCol===col.id?"#fff":"transparent",color:kanbanCol===col.id?"#1A1A2E":headerSubColor}}>
+                  {col.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -625,14 +662,6 @@ function App() {
 
         {activeTab==="dashboard"&&(
           <div>
-            <div style={{display:"flex",gap:0,marginBottom:16,background:"#EFEFEF",borderRadius:12,padding:3}}>
-              {[{id:"section",label:"セクション"},{id:"active",label:"進行中のみ"}].map(col=>(
-                <button key={col.id} onClick={()=>setKanbanCol(col.id)} style={{flex:1,padding:"8px 4px",borderRadius:9,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,transition:"all 0.2s",background:kanbanCol===col.id?"#fff":"transparent",color:kanbanCol===col.id?"#1A1A2E":"#aaa",boxShadow:kanbanCol===col.id?"0 1px 4px rgba(0,0,0,0.1)":"none"}}>
-                  {col.label}
-                </button>
-              ))}
-            </div>
-
             {kanbanCol==="section" ? (
               <div>
                 {[
@@ -640,8 +669,8 @@ function App() {
                   {label:"未着手",color:"#bbb",list:todo},
                   {label:"完了",color:"#A29BFE",list:done},
                 ].map(section=>section.list.length===0?null:(
-                  <div key={section.label} style={{marginBottom:20}}>
-                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+                  <div key={section.label} style={{marginBottom:12}}>
+                    <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}>
                       <div style={{width:10,height:10,borderRadius:"50%",background:section.color}}/>
                       <div style={{fontSize:11,fontWeight:700,color:section.color,letterSpacing:0.5}}>{section.label}</div>
                       <div style={{fontSize:10,color:"#ccc"}}>({section.list.length}件)</div>
@@ -673,12 +702,28 @@ function App() {
                     ))}
                   </div>
                 </div>
-                {[{key:"title",placeholder:"案件名 *",label:"案件名 *"},{key:"client",placeholder:"クライアント名",label:"クライアント"}].map(f=>(
-                  <div key={f.key} style={{marginBottom:10}}>
-                    <div style={{fontSize:10,color:"#999",marginBottom:4}}>{f.label}</div>
-                    <input type="text" placeholder={f.placeholder} value={newP[f.key]} onChange={e=>setNewP(p=>({...p,[f.key]:e.target.value}))} style={S.input}/>
+                <div style={{marginBottom:10}}>
+                  <div style={{fontSize:10,color:"#999",marginBottom:4}}>案件名 *</div>
+                  <input type="text" placeholder="案件名 *" value={newP.title} onChange={e=>setNewP(p=>({...p,title:e.target.value}))} style={S.input}/>
+                </div>
+                <div style={{marginBottom:10}}>
+                  <div style={{fontSize:10,color:"#999",marginBottom:4}}>タグ</div>
+                  <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:6}}>
+                    {(newP.tags||[]).map((tag,i)=>(
+                      <span key={i} style={{fontSize:11,padding:"2px 8px",borderRadius:6,background:["#FF6B6B22","#4ECDC422","#A29BFE22","#FFD93D22","#F8A5C222","#74B9FF22"][i%6],color:["#FF6B6B","#4ECDC4","#A29BFE","#CC9900","#D4608A","#2980B9"][i%6],fontWeight:600,display:"flex",alignItems:"center",gap:4}}>
+                        {tag}
+                        <span onClick={()=>setNewP(p=>({...p,tags:p.tags.filter((_,j)=>j!==i)}))} style={{cursor:"pointer",opacity:0.6}}>×</span>
+                      </span>
+                    ))}
                   </div>
-                ))}
+                  <div style={{display:"flex",gap:6}}>
+                    <input type="text" placeholder="タグを入力してEnter" value={tagInput}
+                      onChange={e=>setTagInput(e.target.value)}
+                      onKeyDown={e=>{if(e.key==="Enter"&&tagInput.trim()){e.preventDefault();setNewP(p=>({...p,tags:[...(p.tags||[]),tagInput.trim()]}));setTagInput("");}}}
+                      style={{...S.input}}/>
+                    <button onClick={()=>{if(tagInput.trim()){setNewP(p=>({...p,tags:[...(p.tags||[]),tagInput.trim()]}));setTagInput("");}}} style={{padding:"0 12px",borderRadius:8,border:"none",background:"#1A1A2E",color:"#fff",fontSize:12,cursor:"pointer",whiteSpace:"nowrap"}}>追加</button>
+                  </div>
+                </div>
                 <div style={{display:"flex",gap:8,marginBottom:10}}>
                   <div style={{flex:1}}>
                     <div style={{fontSize:10,color:"#999",marginBottom:4}}>開始日</div>
@@ -696,7 +741,8 @@ function App() {
                   </div>
                 )}
                 <div style={{display:"flex",gap:8}}>
-                  <button onClick={()=>{setShowAdd(false);setNewP({title:"",client:"",startDate:"",endDate:"",emoji:"🎨"});}} style={{flex:1,padding:"10px",borderRadius:10,border:"1.5px solid #EEE",background:"#fff",color:"#999",fontSize:13,cursor:"pointer"}}>キャンセル</button>
+                  <button onClick={()=>{setShowAdd(false);setNewP({title:"",client:"",startDate:"",endDate:"",emoji:"🎨",tags:[]});
+    setTagInput("");}} style={{flex:1,padding:"10px",borderRadius:10,border:"1.5px solid #EEE",background:"#fff",color:"#999",fontSize:13,cursor:"pointer"}}>キャンセル</button>
                   <button onClick={addProject} style={{flex:2,padding:"10px",borderRadius:10,border:"none",background:"#1A1A2E",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>追加する</button>
                 </div>
               </div>
@@ -888,7 +934,7 @@ function App() {
       </div>
 
       <div style={S.footer}>
-        <span>Creative Board — v0.46</span>
+        <span>Creative Board — v0.55</span>
         <button onClick={()=>{if(window.confirm("データをリセットしますか？")){localStorage.clear();window.location.reload();}}} style={{marginLeft:12,background:"none",border:"none",color:"#CCC",fontSize:10,cursor:"pointer",textDecoration:"underline"}}>リセット</button>
       </div>
     </div>
