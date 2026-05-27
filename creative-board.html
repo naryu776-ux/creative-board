@@ -32,16 +32,101 @@ input,textarea,button { font-family: inherit; }
 <script type="text/babel">
 const { useState, useEffect, useRef } = React;
 
-const NUDGES = [
-  { icon:"✏️", text:"今日、5分だけスケッチしてみよう" },
-  { icon:"👀", text:"好きなイラストレーターの最新作、チェックしてみた？" },
-  { icon:"🚶", text:"外に出て人間観察の時間、取れそう？" },
-  { icon:"💬", text:"クリエイター仲間と最近交流した？" },
-  { icon:"🎨", text:"気になってたギャラリーやオンライン展示、見てみよう" },
-  { icon:"📱", text:"参考になりそうなアカウント、新しくフォローしてみよう" },
-  { icon:"🎬", text:"インスピレーションになりそうな映画や動画、見た？" },
-  { icon:"📖", text:"積読になってる本、少しだけ読んでみよう" },
-];
+const CREATOR_TYPES = {
+  illustrator: {
+    label: "イラストレーター", icon: "✏️",
+    nudges: [
+      { icon:"✏️", text:"今日、5分だけスケッチしてみよう" },
+      { icon:"👀", text:"好きなイラストレーターの最新作、チェックしてみた？" },
+      { icon:"🚶", text:"外に出て人間観察の時間、取れそう？" },
+      { icon:"🎨", text:"気になってたギャラリーやオンライン展示、見てみよう" },
+      { icon:"📖", text:"好きな画集やアートブック、眺めてみよう" },
+      { icon:"🌿", text:"自然の中でスケッチネタを探してみよう" },
+      { icon:"💬", text:"クリエイター仲間と最近交流した？" },
+      { icon:"🎬", text:"インスピレーションになりそうな映画、見た？" },
+    ]
+  },
+  graphic: {
+    label: "グラフィックデザイナー", icon: "🖌️",
+    nudges: [
+      { icon:"🖌️", text:"最新のデザイントレンド、チェックしてみた？" },
+      { icon:"🎯", text:"Awwwards や Behance で刺激をもらおう" },
+      { icon:"🔤", text:"気になるフォント、最近見つけた？" },
+      { icon:"🖥️", text:"UIデザインの参考サイトを眺めてみよう" },
+      { icon:"📐", text:"グリッドや余白の研究、してみよう" },
+      { icon:"🌈", text:"カラーパレットを作って遊んでみよう" },
+      { icon:"💬", text:"デザイナー仲間と最近交流した？" },
+      { icon:"📖", text:"積読になってるデザイン本、読んでみよう" },
+    ]
+  },
+  photographer: {
+    label: "カメラマン", icon: "📸",
+    nudges: [
+      { icon:"📸", text:"今日、カメラを持って外に出てみよう" },
+      { icon:"🌅", text:"マジックアワーの時間帯、チェックしてみた？" },
+      { icon:"👁️", text:"好きなフォトグラファーの作品、最近見た？" },
+      { icon:"🏙️", text:"普段と違うルートを歩いて被写体を探そう" },
+      { icon:"🎬", text:"映像作品から構図のヒントをもらおう" },
+      { icon:"💡", text:"ライティングの勉強、最近してみた？" },
+      { icon:"💬", text:"カメラマン仲間と最近交流した？" },
+      { icon:"🖼️", text:"写真展や展覧会、最近行ってみた？" },
+    ]
+  },
+  musician: {
+    label: "ミュージシャン", icon: "🎵",
+    nudges: [
+      { icon:"🎵", text:"今日、15分だけ楽器を触ってみよう" },
+      { icon:"🎧", text:"最近聴いていないジャンルの音楽を聴いてみよう" },
+      { icon:"🎤", text:"好きなアーティストのライブ映像、見てみよう" },
+      { icon:"🎼", text:"鼻歌でいいからメロディを作ってみよう" },
+      { icon:"🎸", text:"カバー曲に挑戦してみよう" },
+      { icon:"🌿", text:"自然の音からリズムをとってみよう" },
+      { icon:"💬", text:"ミュージシャン仲間と最近セッションした？" },
+      { icon:"📖", text:"音楽理論の本、少しだけ読んでみよう" },
+    ]
+  },
+  videographer: {
+    label: "映像クリエイター", icon: "🎬",
+    nudges: [
+      { icon:"🎬", text:"好きな映画の構図やカット割りを分析してみよう" },
+      { icon:"📱", text:"短編動画でいいから1本撮ってみよう" },
+      { icon:"✂️", text:"編集技術の新しいチュートリアル、見てみた？" },
+      { icon:"🎵", text:"BGMやSEの素材、最近探してみた？" },
+      { icon:"💡", text:"ライティングのテスト撮影、してみよう" },
+      { icon:"🌍", text:"海外クリエイターの作品からヒントをもらおう" },
+      { icon:"💬", text:"映像仲間と最近交流した？" },
+      { icon:"📖", text:"映像表現の本や記事、読んでみよう" },
+    ]
+  },
+  writer: {
+    label: "ライター・作家", icon: "📝",
+    nudges: [
+      { icon:"📝", text:"今日、100文字でいいから何か書いてみよう" },
+      { icon:"📖", text:"積読になってる本、少しだけ読んでみよう" },
+      { icon:"🚶", text:"外に出て人間観察、ネタを拾ってみよう" },
+      { icon:"🗞️", text:"気になる記事、最近読んだ？" },
+      { icon:"💬", text:"誰かに話しかけて、ストーリーをもらおう" },
+      { icon:"✍️", text:"日記や思ったことをメモしてみよう" },
+      { icon:"🎬", text:"映画や小説から文体のヒントをもらおう" },
+      { icon:"🌿", text:"カフェや公園でインスピレーションを探そう" },
+    ]
+  },
+  other: {
+    label: "その他クリエイター", icon: "💡",
+    nudges: [
+      { icon:"✏️", text:"今日、新しいことを1つ試してみよう" },
+      { icon:"👀", text:"好きなクリエイターの最新作、チェックしてみた？" },
+      { icon:"🚶", text:"外に出てインスピレーションを探そう" },
+      { icon:"💬", text:"クリエイター仲間と最近交流した？" },
+      { icon:"🎨", text:"気になったギャラリーや展示、見てみよう" },
+      { icon:"📱", text:"参考になるアカウント、新しくフォローしてみよう" },
+      { icon:"🎬", text:"インスピレーションになりそうな映像作品、見た？" },
+      { icon:"📖", text:"積読になってる本、少しだけ読んでみよう" },
+    ]
+  },
+};
+
+const NUDGES = CREATOR_TYPES.illustrator.nudges; // デフォルト（互換性のため残す）
 
 const PROJECT_EMOJIS = [
   "🎨","✏️","🖌️","📐","🎭","🎬","🎵","🎤","📸","🖥️",
@@ -192,7 +277,9 @@ function App() {
   const [expandedId, setExpandedId] = useState(null);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [showColorPicker, setShowColorPicker] = useState(false);
-  const [nudge, setNudge] = useState(NUDGES[0]);
+  const [creatorType, setCreatorType] = useState(() => localStorage.getItem('cb_creatorType') || 'illustrator');
+  const currentNudges = CREATOR_TYPES[creatorType]?.nudges || CREATOR_TYPES.illustrator.nudges;
+  const [nudge, setNudge] = useState(currentNudges[0]);
   const [nudgeVisible, setNudgeVisible] = useState(true);
   const [tickerNudge, setTickerNudge] = useState(NUDGES[0]);
   const [tickerKey, setTickerKey] = useState(0);
@@ -241,15 +328,16 @@ function App() {
   const headerSubColor = headerTextColor==="#1A1A2E" ? "rgba(0,0,0,0.4)" : "rgba(255,255,255,0.5)";
 
   useEffect(() => {
-    setNudge(NUDGES[Math.floor(Math.random()*NUDGES.length)]);
-    setTickerNudge(NUDGES[Math.floor(Math.random()*NUDGES.length)]);
+    const idx = Math.floor(Math.random()*currentNudges.length);
+    setNudge(currentNudges[idx]);
+    setTickerNudge(currentNudges[idx]);
     if ("Notification" in window) setNotifPerm(Notification.permission);
     const tickerId = setInterval(() => {
-      setTickerNudge(NUDGES[Math.floor(Math.random()*NUDGES.length)]);
+      setTickerNudge(currentNudges[Math.floor(Math.random()*currentNudges.length)]);
       setTickerKey(k => k+1);
     }, 8000);
     return () => clearInterval(tickerId);
-  }, []);
+  }, [creatorType]);
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -280,6 +368,7 @@ function App() {
   useEffect(() => { try { localStorage.setItem("cb_operations", JSON.stringify(operations)); } catch {} }, [operations]);
   useEffect(() => { try { localStorage.setItem("cb_links", JSON.stringify(myLinks)); } catch {} }, [myLinks]);
   useEffect(() => { try { localStorage.setItem("cb_headerColor", headerColor); } catch {} }, [headerColor]);
+  useEffect(() => { try { localStorage.setItem('cb_creatorType', creatorType); } catch {} }, [creatorType]);
 
   const fireNotif = (body, title) => {
     if ("Notification" in window && Notification.permission==="granted")
@@ -419,57 +508,58 @@ function App() {
 
     return (
       <div key={project.id} style={S.card(days<=3)}>
-        <div onClick={() => setExpandedId(isExpanded?null:project.id)} style={{padding:"10px 12px",cursor:"pointer"}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
-            <div style={{display:"flex",alignItems:"flex-start",gap:10,flex:1}}>
-              <div style={{flexShrink:0}}>
-                <EmojiChar pct={progress} emoji={project.emoji||"🎨"} />
-              </div>
-              <div style={{flex:1,paddingTop:4}}>
-                <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:3}}>
-                  <div style={{width:8,height:8,borderRadius:"50%",background:project.color,flexShrink:0}} />
-                  {editProjectId===project.id ? (
-                    <div onClick={e=>e.stopPropagation()} style={{flex:1}}>
-                      <input type="text" value={editProjectTitle} onChange={e=>setEditProjectTitle(e.target.value)}
-                        onKeyDown={e=>{e.stopPropagation();if(e.key==="Escape"){setEditProjectId(null);setEditProjectTitle("");setEditDeadlineVal("");}}}
-                        autoFocus style={{width:"100%",padding:"4px 8px",borderRadius:6,border:`1.5px solid ${project.color}`,fontSize:13,outline:"none",fontWeight:700,boxSizing:"border-box",marginBottom:5}}/>
-                      <div style={{display:"flex",gap:5,alignItems:"center"}}>
-                        <span style={{fontSize:10,color:"#999",whiteSpace:"nowrap"}}>期限</span>
-                        <input type="date" value={editDeadlineVal} onChange={e=>setEditDeadlineVal(e.target.value)}
-                          style={{flex:1,padding:"3px 6px",borderRadius:6,border:"1.5px solid #EEE",fontSize:11,outline:"none"}}/>
-                        <button onClick={()=>updateProjectInfo(project.id,editProjectTitle,editDeadlineVal)} style={{padding:"4px 8px",borderRadius:6,border:"none",background:project.color,color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>保存</button>
-                        <button onClick={e=>{e.stopPropagation();setEditProjectId(null);setEditProjectTitle("");setEditDeadlineVal("");}} style={{padding:"4px 6px",borderRadius:6,border:"1.5px solid #EEE",background:"#fff",color:"#999",fontSize:11,cursor:"pointer"}}>✕</button>
-                      </div>
+        <div onClick={() => setExpandedId(isExpanded?null:project.id)} style={{padding:"8px 12px",cursor:"pointer"}}>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <div style={{flexShrink:0}}>
+              <EmojiChar pct={progress} emoji={project.emoji||"🎨"} />
+            </div>
+            <div style={{flex:1,minWidth:0}}>
+              {editProjectId===project.id ? (
+                <div onClick={e=>e.stopPropagation()}>
+                  <input type="text" value={editProjectTitle} onChange={e=>setEditProjectTitle(e.target.value)}
+                    onKeyDown={e=>{e.stopPropagation();if(e.key==="Escape"){setEditProjectId(null);setEditProjectTitle("");setEditDeadlineVal("");}}}
+                    autoFocus style={{width:"100%",padding:"4px 8px",borderRadius:6,border:`1.5px solid ${project.color}`,fontSize:12,outline:"none",fontWeight:700,boxSizing:"border-box",marginBottom:4}}/>
+                  <div style={{display:"flex",gap:5,alignItems:"center"}}>
+                    <span style={{fontSize:9,color:"#999",whiteSpace:"nowrap"}}>期限</span>
+                    <input type="date" value={editDeadlineVal} onChange={e=>setEditDeadlineVal(e.target.value)}
+                      style={{flex:1,padding:"3px 6px",borderRadius:6,border:"1.5px solid #EEE",fontSize:10,outline:"none"}}/>
+                    <button onClick={()=>updateProjectInfo(project.id,editProjectTitle,editDeadlineVal)} style={{padding:"3px 8px",borderRadius:6,border:"none",background:project.color,color:"#fff",fontSize:10,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>保存</button>
+                    <button onClick={e=>{e.stopPropagation();setEditProjectId(null);setEditProjectTitle("");setEditDeadlineVal("");}} style={{padding:"3px 6px",borderRadius:6,border:"1.5px solid #EEE",background:"#fff",color:"#999",fontSize:10,cursor:"pointer"}}>✕</button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div style={{display:"flex",alignItems:"center",gap:4,marginBottom:2}}>
+                    <div style={{width:6,height:6,borderRadius:"50%",background:project.color,flexShrink:0}} />
+                    <div style={{fontSize:12,fontWeight:700,color:"#1A1A2E",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1}}>{project.title}</div>
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:4}}>
+                    <div style={{flex:1,height:3,background:"#F0F0F0",borderRadius:10,overflow:"hidden"}}>
+                      <div style={{height:"100%",width:`${progress}%`,background:project.color,borderRadius:10,transition:"width 0.4s ease"}} />
                     </div>
-                  ) : (
-                    <div style={{display:"flex",alignItems:"center",gap:6}}>
-                      <div style={{fontSize:13,fontWeight:700,color:"#1A1A2E",lineHeight:1.3}}>{project.title}</div>
-                      <button onClick={e=>{e.stopPropagation();setEditProjectId(project.id);setEditProjectTitle(project.title);setEditDeadlineVal(toDateInput(project.deadline));}} style={{background:"none",border:"none",color:"#ccc",fontSize:12,cursor:"pointer",padding:0}}>✏️</button>
+                    <div style={{fontSize:8,fontWeight:700,color:project.color,flexShrink:0}}>{progress}%</div>
+                  </div>
+                  {(project.tags||[]).length>0&&(
+                    <div style={{display:"flex",gap:3,flexWrap:"wrap",marginTop:2}}>
+                      {(project.tags||[]).map((tag,i)=>(
+                        <span key={i} style={{fontSize:8,padding:"1px 5px",borderRadius:4,background:["#FF6B6B22","#4ECDC422","#A29BFE22","#FFD93D22","#F8A5C222","#74B9FF22"][i%6],color:["#FF6B6B","#4ECDC4","#A29BFE","#CC9900","#D4608A","#2980B9"][i%6],fontWeight:600,whiteSpace:"nowrap"}}>{tag}</span>
+                      ))}
                     </div>
                   )}
-                </div>
-                <div style={{display:"flex",gap:3,flexWrap:"wrap",marginLeft:12,marginTop:1}}>
-                  {(project.tags||[]).map((tag,i)=>(
-                    <span key={i} style={{fontSize:8,padding:"1px 5px",borderRadius:4,background:["#FF6B6B22","#4ECDC422","#A29BFE22","#FFD93D22","#F8A5C222","#74B9FF22"][i%6],color:["#FF6B6B","#4ECDC4","#A29BFE","#CC9900","#D4608A","#2980B9"][i%6],fontWeight:600,whiteSpace:"nowrap"}}>{tag}</span>
-                  ))}
-                </div>
-              </div>
-              <div style={{display:"flex",alignItems:"center",gap:6}}>
-                <div style={{flex:1,height:3,background:"#F0F0F0",borderRadius:10,overflow:"hidden"}}>
-                  <div style={{height:"100%",width:`${progress}%`,background:project.color,borderRadius:10,transition:"width 0.4s ease"}} />
-                </div>
-                <div style={{fontSize:8,fontWeight:700,color:project.color,flexShrink:0}}>{progress}%</div>
-              </div>
+                </>
+              )}
             </div>
-            <div style={{flexShrink:0,textAlign:"right"}}>
-              <div style={{background:urgency.bg,color:urgency.accent,borderRadius:6,padding:"2px 7px",fontSize:10,fontWeight:700,whiteSpace:"nowrap"}}>
-                {days<=0?"超過!":`残り${days}日`}
+            {editProjectId!==project.id&&(
+              <div style={{flexShrink:0,display:"flex",flexDirection:"column",alignItems:"flex-end",gap:2}}>
+                <div style={{display:"flex",alignItems:"center",gap:4}}>
+                  <button onClick={e=>{e.stopPropagation();setEditProjectId(project.id);setEditProjectTitle(project.title);setEditDeadlineVal(toDateInput(project.deadline));}} style={{background:"none",border:"none",color:"#ccc",fontSize:11,cursor:"pointer",padding:0,lineHeight:1}}>✏️</button>
+                  <div style={{background:urgency.bg,color:urgency.accent,borderRadius:6,padding:"3px 9px",fontSize:11,fontWeight:700,whiteSpace:"nowrap"}}>
+                    {days<=0?"超過!":`残り${days}日`}
+                  </div>
+                </div>
+                <div style={{fontSize:10,color:"#bbb",marginTop:1}}>{fmtDate(project.deadline)}</div>
               </div>
-              <div style={{fontSize:8,color:"#bbb",marginTop:1}}>{fmtDate(project.deadline)}</div>
-            </div>
-          </div>
-          <div style={{display:"flex",justifyContent:"flex-end",alignItems:"center",marginTop:2}}>
-            <div style={{fontSize:8,color:"#ccc"}}>{isExpanded?"▲ 閉じる":"▼ 開く"}</div>
+            )}
           </div>
         </div>
 
@@ -500,7 +590,7 @@ function App() {
               <div style={{display:"flex",gap:5}}>
                 <input type="text" placeholder="タグを追加…" value={cardTagInputs[project.id]||""}
                   onChange={e=>setCardTagInputs(p=>({...p,[project.id]:e.target.value}))}
-                  onKeyDown={e=>{e.stopPropagation();if(e.key==="Enter"&&(cardTagInputs[project.id]||"").trim()){addTag(project.id,cardTagInputs[project.id]);}}}
+                  onKeyDown={e=>e.stopPropagation()}
                   style={{flex:1,padding:"5px 8px",borderRadius:7,border:"1.5px solid #E8E8E8",fontSize:11,outline:"none"}}/>
                 <button onClick={()=>addTag(project.id,cardTagInputs[project.id]||"")}
                   style={{padding:"5px 10px",borderRadius:7,border:"none",background:project.color,color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer"}}>＋</button>
@@ -523,7 +613,7 @@ function App() {
                         {editTaskId===rKey(task.id) ? (
                           <div style={{display:"flex",gap:5}}>
                             <input type="text" value={editTaskLabel} onChange={e=>setEditTaskLabel(e.target.value)}
-                              onKeyDown={e=>{e.stopPropagation();if(e.key==="Enter")updateTaskLabel(project.id,task.id,editTaskLabel);if(e.key==="Escape"){setEditTaskId(null);setEditTaskLabel("");}}}
+                              onKeyDown={e=>{e.stopPropagation();if(e.key==="Escape"){setEditTaskId(null);setEditTaskLabel("");}}}
                               autoFocus style={{flex:1,padding:"4px 8px",borderRadius:6,border:`1.5px solid ${project.color}`,fontSize:12,outline:"none"}}/>
                             <button onClick={()=>updateTaskLabel(project.id,task.id,editTaskLabel)} style={{padding:"4px 10px",borderRadius:6,border:"none",background:project.color,color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer"}}>保存</button>
                             <button onClick={()=>{setEditTaskId(null);setEditTaskLabel("");}} style={{padding:"4px 8px",borderRadius:6,border:"1.5px solid #EEE",background:"#fff",color:"#999",fontSize:11,cursor:"pointer"}}>✕</button>
@@ -580,7 +670,7 @@ function App() {
               <div style={{display:"flex",gap:6,marginTop:8}}>
                 <input type="text" placeholder="タスクを追加…" value={taskInputs[project.id]||""}
                   onChange={e=>setTaskInputs(p=>({...p,[project.id]:e.target.value}))}
-                  onKeyDown={e=>{e.stopPropagation();if(e.key==="Enter"){addTask(project.id,taskInputs[project.id]||"");setTaskInputs(p=>({...p,[project.id]:""}));}}}
+                  onKeyDown={e=>e.stopPropagation()}
                   style={{flex:1,padding:"7px 10px",borderRadius:8,border:"1.5px solid #E8E8E8",fontSize:12,outline:"none"}}/>
                 <button onClick={()=>{addTask(project.id,taskInputs[project.id]||"");setTaskInputs(p=>({...p,[project.id]:""}));}} style={{padding:"7px 12px",borderRadius:8,border:"none",background:project.color,color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer"}}>＋</button>
               </div>
@@ -608,6 +698,10 @@ function App() {
                 ))
               }
             </div>
+            {/* 閉じるボタン */}
+            <div onClick={()=>setExpandedId(null)} style={{textAlign:"center",padding:"8px 0 10px",cursor:"pointer",color:"#ccc",fontSize:10,borderTop:"1px solid #F0F0F0",marginTop:4}}>
+              ▲ 閉じる
+            </div>
           </div>
         )}
       </div>
@@ -627,37 +721,40 @@ function App() {
       </div>
 
       <div style={S.header}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-          <div>
-            <div style={{color:headerSubColor,fontSize:11,letterSpacing:1,marginBottom:2}}>{today}</div>
-            <div style={{display:"flex",alignItems:"center",gap:8}}>
-              <div style={{color:headerTextColor,fontSize:20,fontWeight:700,letterSpacing:-0.5}}>Creative Board</div>
-              <button onClick={()=>setShowColorPicker(p=>!p)} style={{background:headerTextColor==="#1A1A2E"?"rgba(0,0,0,0.1)":"rgba(255,255,255,0.12)",border:"none",borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:12,color:headerTextColor}}>🎨</button>
-            </div>
-            {showColorPicker&&(
-              <div style={{marginTop:10,background:headerTextColor==="#1A1A2E"?"rgba(0,0,0,0.06)":"rgba(255,255,255,0.08)",borderRadius:12,padding:"10px 12px"}}>
-                <div style={{fontSize:10,color:headerSubColor,marginBottom:8}}>ヘッダーカラー</div>
-                <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:8}}>
-                  {["#1A1A2E","#2D2D2D","#1B4332","#1E3A5F","#4A1942","#7B2D00","#1A3A4A","#2C1654"].map(c=>(
-                    <div key={c} onClick={()=>setHeaderColor(c)} style={{width:28,height:28,borderRadius:"50%",background:c,cursor:"pointer",border:headerColor===c?"3px solid #fff":"3px solid transparent"}}/>
-                  ))}
-                </div>
-                <div style={{display:"flex",alignItems:"center",gap:8}}>
-                  <div style={{fontSize:10,color:headerSubColor}}>カスタム</div>
-                  <input type="color" value={headerColor} onChange={e=>setHeaderColor(e.target.value)} style={{width:32,height:28,borderRadius:6,border:"none",cursor:"pointer",padding:0}}/>
-                  <div style={{fontSize:11,color:headerTextColor,fontFamily:"monospace"}}>{headerColor}</div>
-                  <button onClick={()=>setShowColorPicker(false)} style={{marginLeft:"auto",background:headerTextColor==="#1A1A2E"?"rgba(0,0,0,0.1)":"rgba(255,255,255,0.15)",border:"none",borderRadius:6,padding:"4px 10px",color:headerTextColor,fontSize:11,cursor:"pointer"}}>閉じる</button>
-                </div>
-              </div>
-            )}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          {/* 左: CBロゴ + 🎨 + 日付 */}
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <svg width="32" height="32" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect width="36" height="36" rx="10" fill={headerTextColor==="#1A1A2E" ? "rgba(0,0,0,0.15)" : "rgba(255,255,255,0.15)"}/>
+              <text x="18" y="24" textAnchor="middle" fontSize="16" fontWeight="800" fontFamily="'Hiragino Sans','Noto Sans JP',sans-serif" fill={headerTextColor} letterSpacing="-0.5">CB</text>
+            </svg>
+            <button onClick={()=>setShowColorPicker(p=>!p)} style={{background:headerTextColor==="#1A1A2E"?"rgba(0,0,0,0.1)":"rgba(255,255,255,0.12)",border:"none",borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:12,color:headerTextColor,lineHeight:1}}>🎨</button>
+            <div style={{color:headerSubColor,fontSize:11,letterSpacing:0.5}}>{today}</div>
           </div>
-          <div style={{display:"flex",gap:8}}>
-            {urgentCount>0&&<div style={{background:"#FF4444",color:"#fff",borderRadius:20,padding:"4px 10px",fontSize:11,fontWeight:700}}>⚠ {urgentCount}件緊急</div>}
-            <div style={{background:headerTextColor==="#1A1A2E"?"rgba(0,0,0,0.1)":"rgba(255,255,255,0.1)",color:headerTextColor,borderRadius:20,padding:"4px 10px",fontSize:11}}>{projects.length}件稼働中</div>
+          {/* 右: バッジ */}
+          <div style={{display:"flex",gap:6,alignItems:"center"}}>
+            {urgentCount>0&&<div style={{background:"#FF4444",color:"#fff",borderRadius:20,padding:"3px 8px",fontSize:10,fontWeight:700}}>⚠ {urgentCount}件緊急</div>}
+            <div style={{background:headerTextColor==="#1A1A2E"?"rgba(0,0,0,0.1)":"rgba(255,255,255,0.1)",color:headerTextColor,borderRadius:20,padding:"3px 8px",fontSize:10}}>{projects.length}件稼働中</div>
           </div>
         </div>
-        <div style={{display:"flex",gap:4,marginTop:14,alignItems:"center"}}>
-          {[{id:"dashboard",label:"案件"},{id:"promotion",label:"発信"},{id:"operation",label:"運営"},{id:"input",label:"インプット"}].map(tab=>(
+        {showColorPicker&&(
+          <div style={{marginTop:10,background:headerTextColor==="#1A1A2E"?"rgba(0,0,0,0.06)":"rgba(255,255,255,0.08)",borderRadius:12,padding:"10px 12px"}}>
+            <div style={{fontSize:10,color:headerSubColor,marginBottom:8}}>ヘッダーカラー</div>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:8}}>
+              {["#1A1A2E","#2D2D2D","#1B4332","#1E3A5F","#4A1942","#7B2D00","#1A3A4A","#2C1654"].map(c=>(
+                <div key={c} onClick={()=>setHeaderColor(c)} style={{width:28,height:28,borderRadius:"50%",background:c,cursor:"pointer",border:headerColor===c?"3px solid #fff":"3px solid transparent"}}/>
+              ))}
+            </div>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <div style={{fontSize:10,color:headerSubColor}}>カスタム</div>
+              <input type="color" value={headerColor} onChange={e=>setHeaderColor(e.target.value)} style={{width:32,height:28,borderRadius:6,border:"none",cursor:"pointer",padding:0}}/>
+              <div style={{fontSize:11,color:headerTextColor,fontFamily:"monospace"}}>{headerColor}</div>
+              <button onClick={()=>setShowColorPicker(false)} style={{marginLeft:"auto",background:headerTextColor==="#1A1A2E"?"rgba(0,0,0,0.1)":"rgba(255,255,255,0.15)",border:"none",borderRadius:6,padding:"4px 10px",color:headerTextColor,fontSize:11,cursor:"pointer"}}>閉じる</button>
+            </div>
+          </div>
+        )}
+        <div style={{display:"flex",gap:4,marginTop:10,alignItems:"center"}}>
+          {[{id:"today",label:"今日"},{id:"dashboard",label:"案件"},{id:"promotion",label:"発信"},{id:"operation",label:"運営"},{id:"input",label:"インプット"}].map(tab=>(
             <button key={tab.id} onClick={()=>setActiveTab(tab.id)} style={S.tab(activeTab===tab.id)}>{tab.label}</button>
           ))}
           {activeTab==="dashboard" && (
@@ -688,6 +785,98 @@ function App() {
           <div style={S.notifBanner}>
             <div style={{fontSize:12,color:"#886600"}}>🔔 通知を許可するとリマインドが届きます</div>
             <button onClick={requestNotif} style={{background:"#FFD93D",border:"none",borderRadius:8,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>許可する</button>
+          </div>
+        )}
+
+        {activeTab==="today"&&(
+          <div>
+            {/* 締め切りが今日・明日・緊急の未完了タスク */}
+            {(() => {
+              const urgentProjects = projects.filter(p => getDaysLeft(p.deadline) <= 3 && getProgress(p.tasks) < 100);
+              const todayTasks = projects.flatMap(p =>
+                p.tasks
+                  .filter(t => !t.done && !t.pendingDelete)
+                  .map(t => ({...t, projectTitle: p.title, projectColor: p.color, projectEmoji: p.emoji||"🎨"}))
+              ).filter(t => t.reminders.start && new Date(t.reminders.start).toDateString() === new Date().toDateString());
+
+              const todayPromo = promotion.filter(t => !t.done && (t.due==="今日" || (t.due && new Date(t.due).toDateString()===new Date().toDateString())));
+              const todayOps = operations.filter(t => !t.done && t.notify && new Date(t.notify).toDateString()===new Date().toDateString());
+              const urgentTaskList = urgentProjects.flatMap(p =>
+                p.tasks.filter(t=>!t.done&&!t.pendingDelete).map(t=>({...t,projectTitle:p.title,projectColor:p.color,projectEmoji:p.emoji||"🎨",days:getDaysLeft(p.deadline)}))
+              );
+
+              return (
+                <div>
+                  {urgentTaskList.length===0 && todayPromo.length===0 && todayOps.length===0 && todayTasks.length===0 && (
+                    <div style={{textAlign:"center",padding:"48px 0",color:"#ccc"}}>
+                      <div style={{fontSize:40,marginBottom:12}}>✨</div>
+                      <div style={{fontSize:14,fontWeight:600}}>今日はタスクがありません</div>
+                    </div>
+                  )}
+
+                  {urgentTaskList.length>0&&(
+                    <div style={{marginBottom:16}}>
+                      <div style={{fontSize:10,color:"#FF4444",fontWeight:700,marginBottom:8,letterSpacing:0.5}}>⚠ 緊急案件のタスク</div>
+                      {urgentTaskList.map((task,i)=>(
+                        <div key={i} style={{background:"#fff",borderRadius:12,padding:"10px 14px",marginBottom:6,boxShadow:"0 1px 6px rgba(0,0,0,0.06)",borderLeft:`3px solid ${task.projectColor}`,display:"flex",alignItems:"center",gap:10}}>
+                          <span style={{fontSize:18}}>{task.projectEmoji}</span>
+                          <div style={{flex:1}}>
+                            <div style={{fontSize:12,fontWeight:700,color:"#1A1A2E"}}>{task.label}</div>
+                            <div style={{fontSize:10,color:"#999",marginTop:1}}>{task.projectTitle} · 残り{task.days}日</div>
+                          </div>
+                          <div onClick={()=>toggleTask(projects.find(p=>p.title===task.projectTitle)?.id, task.id)}
+                            style={{width:20,height:20,borderRadius:6,border:`2px solid ${task.projectColor}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {todayTasks.length>0&&(
+                    <div style={{marginBottom:16}}>
+                      <div style={{fontSize:10,color:"#4ECDC4",fontWeight:700,marginBottom:8,letterSpacing:0.5}}>🔔 今日開始予定のタスク</div>
+                      {todayTasks.map((task,i)=>(
+                        <div key={i} style={{background:"#fff",borderRadius:12,padding:"10px 14px",marginBottom:6,boxShadow:"0 1px 6px rgba(0,0,0,0.06)",borderLeft:`3px solid ${task.projectColor}`,display:"flex",alignItems:"center",gap:10}}>
+                          <span style={{fontSize:18}}>{task.projectEmoji}</span>
+                          <div style={{flex:1}}>
+                            <div style={{fontSize:12,fontWeight:700,color:"#1A1A2E"}}>{task.label}</div>
+                            <div style={{fontSize:10,color:"#999",marginTop:1}}>{task.projectTitle} · {fmtDt(task.reminders.start)}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {todayPromo.length>0&&(
+                    <div style={{marginBottom:16}}>
+                      <div style={{fontSize:10,color:"#A29BFE",fontWeight:700,marginBottom:8,letterSpacing:0.5}}>📣 今日の発信タスク</div>
+                      {todayPromo.map(task=>(
+                        <div key={task.id} style={{background:"#fff",borderRadius:12,padding:"10px 14px",marginBottom:6,boxShadow:"0 1px 6px rgba(0,0,0,0.06)",display:"flex",alignItems:"center",gap:10}}>
+                          <div onClick={()=>setPromotion(p=>p.map(t=>t.id===task.id?{...t,done:true}:t))}
+                            style={{width:20,height:20,borderRadius:6,border:"2px solid #A29BFE",cursor:"pointer",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                          </div>
+                          <div style={{fontSize:12,color:"#1A1A2E",flex:1}}>{task.label}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {todayOps.length>0&&(
+                    <div style={{marginBottom:16}}>
+                      <div style={{fontSize:10,color:"#4ECDC4",fontWeight:700,marginBottom:8,letterSpacing:0.5}}>⚙️ 今日の運営タスク</div>
+                      {todayOps.map(task=>(
+                        <div key={task.id} style={{background:"#fff",borderRadius:12,padding:"10px 14px",marginBottom:6,boxShadow:"0 1px 6px rgba(0,0,0,0.06)",display:"flex",alignItems:"center",gap:10}}>
+                          <div onClick={()=>toggleOperation(task.id)}
+                            style={{width:20,height:20,borderRadius:6,border:"2px solid #4ECDC4",cursor:"pointer",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                          </div>
+                          <div style={{fontSize:12,color:"#1A1A2E",flex:1}}>{task.label}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         )}
 
@@ -750,7 +939,7 @@ function App() {
                   <div style={{display:"flex",gap:6}}>
                     <input type="text" placeholder="タグを入力してEnter" value={tagInput}
                       onChange={e=>setTagInput(e.target.value)}
-                      onKeyDown={e=>{if(e.key==="Enter"&&tagInput.trim()){e.preventDefault();setNewP(p=>({...p,tags:[...(p.tags||[]),tagInput.trim()]}));setTagInput("");}}}
+                      onKeyDown={e=>{if(e.key==="Escape")setTagInput("");}}
                       style={{...S.input}}/>
                     <button onClick={()=>{if(tagInput.trim()){setNewP(p=>({...p,tags:[...(p.tags||[]),tagInput.trim()]}));setTagInput("");}}} style={{padding:"0 12px",borderRadius:8,border:"none",background:"#1A1A2E",color:"#fff",fontSize:12,cursor:"pointer",whiteSpace:"nowrap"}}>追加</button>
                   </div>
@@ -946,26 +1135,37 @@ function App() {
 
         {activeTab==="input"&&(
           <div>
-            <div style={{fontSize:11,color:"#999",marginBottom:16}}>今日のクリエイティブ声掛け</div>
+            {/* クリエイタータイプ選択 */}
+            <div style={{marginBottom:16}}>
+              <div style={{fontSize:11,color:"#999",marginBottom:8,letterSpacing:0.5}}>クリエイタータイプ</div>
+              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                {Object.entries(CREATOR_TYPES).map(([key,val])=>(
+                  <button key={key} onClick={()=>{setCreatorType(key);const n=val.nudges[Math.floor(Math.random()*val.nudges.length)];setNudge(n);setTickerNudge(n);}} style={{padding:"5px 12px",borderRadius:20,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,transition:"all 0.15s",background:creatorType===key?"#1A1A2E":"#EFEFEF",color:creatorType===key?"#fff":"#666"}}>
+                    {val.icon} {val.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div style={{fontSize:11,color:"#999",marginBottom:12,letterSpacing:0.5}}>今日の声掛け</div>
             <div style={{background:"#1A1A2E",borderRadius:20,padding:"24px 20px",marginBottom:16,textAlign:"center",opacity:nudgeVisible?1:0,transition:"opacity 0.2s"}}>
               <div style={{fontSize:40,marginBottom:12}}>{nudge.icon}</div>
               <div style={{color:"#fff",fontSize:16,fontWeight:600,lineHeight:1.6,marginBottom:20}}>{nudge.text}</div>
-              <button onClick={()=>{setNudgeVisible(false);setTimeout(()=>{setNudge(NUDGES[Math.floor(Math.random()*NUDGES.length)]);setNudgeVisible(true);},200);}} style={{padding:"10px 24px",borderRadius:30,border:"1.5px solid rgba(255,255,255,0.2)",background:"transparent",color:"rgba(255,255,255,0.6)",fontSize:12,cursor:"pointer"}}>別のを見る</button>
+              <button onClick={()=>{setNudgeVisible(false);setTimeout(()=>{setNudge(currentNudges[Math.floor(Math.random()*currentNudges.length)]);setNudgeVisible(true);},200);}} style={{padding:"10px 24px",borderRadius:30,border:"1.5px solid rgba(255,255,255,0.2)",background:"transparent",color:"rgba(255,255,255,0.6)",fontSize:12,cursor:"pointer"}}>別のを見る</button>
             </div>
             <div style={{fontSize:11,color:"#999",marginBottom:12}}>インプット活動リスト</div>
-            {NUDGES.map((n,i)=>(
+            {currentNudges.map((n,i)=>(
               <div key={i} style={{background:"#fff",borderRadius:12,padding:"12px 16px",marginBottom:8,display:"flex",alignItems:"center",gap:12,boxShadow:"0 2px 8px rgba(0,0,0,0.04)"}}>
                 <span style={{fontSize:20}}>{n.icon}</span>
                 <span style={{fontSize:13,color:"#333",lineHeight:1.4}}>{n.text}</span>
               </div>
             ))}
-            <button style={{width:"100%",padding:"14px",borderRadius:14,border:"2px dashed #DDD",background:"transparent",color:"#AAA",fontSize:13,cursor:"pointer",marginTop:4}}>＋ 声掛けをカスタム追加</button>
           </div>
         )}
       </div>
 
       <div style={S.footer}>
-        <span>Creative Board — v0.56</span>
+        <span>Creative Board — v0.64</span>
         <button onClick={()=>{if(window.confirm("データをリセットしますか？")){localStorage.clear();window.location.reload();}}} style={{marginLeft:12,background:"none",border:"none",color:"#CCC",fontSize:10,cursor:"pointer",textDecoration:"underline"}}>リセット</button>
       </div>
     </div>
